@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0
+- Quest list window (`/aq list`, a button on the world map, middle-click on the minimap button): search, sort by
+  level / name / distance / zone, filter by zone range and quest type, click a row for a waypoint.
+- Chat notice when a level-up or a turned-in quest makes new quests available (can be switched off).
+- The quest panel names the quest before and after in a chain (one line; can be switched off).
+- Blacklist: hide a single quest, a quest and everything that follows it, a giver, or a whole zone; restore them one by one.
+- Display options: marker shape (exclamation, diamond, round), dark outline, opacity, text size, quest panel size.
+- Quest titles follow the client language when the game has them.
+- More translated text (German, French, Spanish).
+
 ## 0.10.1
 - Fix: a marker the map released on its own could stay invisible; it is drawn again now.
 - Group sizes are also read with the older quest log API.

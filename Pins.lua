@@ -8,6 +8,8 @@ AQ.Pins = Pins
 
 local TEMPLATE = "AllQuestPinTemplate"
 local TEX_AVAILABLE = "Interface\\AddOns\\AllQuest\\images\\Marker64"
+local TEXTURES = { exclaim = TEX_AVAILABLE, diamond = "Interface\\AddOns\\AllQuest\\images\\MarkerDiamond64",
+    round = "Interface\\AddOns\\AllQuest\\images\\MarkerRound64" }
 local BASE_SIZE = 18
 local FADE_IN = 0.25
 
@@ -111,6 +113,8 @@ local function TypesFor(q, kind)
     return list
 end
 
+AQ.TypesFor = TypesFor
+
 -- Letters of a quest's types joined for the level label, and the first letter for the marker badge.
 local function Letters(types)
     local letters = {}
@@ -134,13 +138,13 @@ function AQ.Style(info)
         r, g, b = 0.6, 0.6, 0.6
     end
     if q.rep and q.trivial then r, g, b = 0.6, 0.6, 0.6 end
-    local alpha = q.locked and 0.65 or 1           -- faded only while you are too low level to accept it
+    local alpha = (q.locked and 0.65 or 1) * (db.markerAlpha or 1)   -- faded while you are too low level to accept it
     local badge
     if db.showTypeTags then
         local _, first = Letters(TypesFor(q, info.entry.kind))
         badge = first
     end
-    return TEX_AVAILABLE, r, g, b, alpha, false, badge
+    return TEXTURES[db.markerStyle] or TEX_AVAILABLE, r, g, b, alpha, false, badge
 end
 
 -- Adds the colour key and the type-letter key to a tooltip, each only while that display is turned on.
@@ -171,6 +175,13 @@ function AQ.AddKeyLines(tt)
             tt:AddLine(row[1] .. " - " .. L[row[2]], 0.8, 0.8, 0.8)
         end
     end
+end
+
+-- The size of the text on markers (from the settings).
+function AQ.ApplyFont(fs)
+    if not (GameFontNormalSmall and GameFontNormalSmall.GetFont) then return end
+    local path = GameFontNormalSmall:GetFont()
+    fs:SetFont(path, AQ.db.labelSize or 10, "OUTLINE")
 end
 
 -- Text under a marker (quest level and/or how far above or below you it is), with its colour; nil for none.
@@ -247,6 +258,20 @@ local function DetailLines(q)
     if q.sk then add((AQ.L["Skill: %s %d"]):format(SKILL_NAMES[q.sk[1]] and AQ.L[SKILL_NAMES[q.sk[1]]] or ("skill " .. q.sk[1]), q.sk[2] or 0)) end
     if q.mr then add((AQ.L["Reputation: %s, %s or better"]):format(FactionName(q.mr[1]), AQ.L[StandingName(q.mr[2])])) end
     if q.xr then add((AQ.L["Reputation: %s, below %s"]):format(FactionName(q.xr[1]), AQ.L[StandingName(q.xr[2])])) end
+    if AQ.db.showChainInfo then
+        local prev, nxt = AQ.Data.Chain(q.id)
+        if prev or nxt then
+            local function Name(x)
+                local name = x.name
+                if #name > 26 then name = name:sub(1, 25) .. "..." end
+                return x.more > 0 and (name .. " +" .. x.more) or name
+            end
+            local parts = {}
+            if prev then parts[#parts + 1] = AQ.L["After"] .. ": " .. Name(prev) end
+            if nxt then parts[#parts + 1] = AQ.L["Next"] .. ": " .. Name(nxt) end
+            add(table.concat(parts, "  -  "))
+        end
+    end
     return lines
 end
 
@@ -309,6 +334,15 @@ function AQ.OpenPinMenu(owner, info)
             end)
         end
         root:CreateButton(AQ.L["Hide this giver"], function() AQ.IgnoreGiver(entry.kind .. entry.id, name) end)
+        local first = info.quests[1]
+        if first and AQ.Data.Chain(first.id) then
+            local qname = AQ.Data.QuestName(first.id)
+            root:CreateButton(AQ.L["Hide the quest chain from"] .. ": " .. qname, function() AQ.IgnoreChain(first.id, qname) end)
+        end
+        local zoneInfo = entry.map and C_Map.GetMapInfo(entry.map)
+        if zoneInfo and zoneInfo.name then
+            root:CreateButton(AQ.L["Hide this zone"] .. ": " .. zoneInfo.name, function() AQ.IgnoreZone(entry.map, zoneInfo.name) end)
+        end
     end)
 end
 
@@ -344,6 +378,24 @@ function AQ.OpenFilterMenu(owner)
     end)
 end
 
+-- The quest panel can be shown larger or smaller; the game tooltip's own scale is put back when it hides.
+local savedScale
+local function RestoreScale()
+    if savedScale then
+        GameTooltip:SetScale(savedScale)
+        savedScale = nil
+    end
+end
+if GameTooltip.HookScript then GameTooltip:HookScript("OnHide", RestoreScale) end
+local function ApplyScale()
+    local scale = AQ.db.tooltipScale or 1
+    RestoreScale()
+    if scale ~= 1 then
+        savedScale = GameTooltip:GetScale()
+        GameTooltip:SetScale(savedScale * scale)
+    end
+end
+
 -- Tooltip for a pin; also used by the minimap markers. Detailed by default; "minimal" mode shows only
 -- the giver and each quest's level and name. `position`/`total`: this giver is one of several at the same spot.
 function AQ.ShowQuestTooltip(owner, info, anchor, position, total)
@@ -352,6 +404,7 @@ function AQ.ShowQuestTooltip(owner, info, anchor, position, total)
     local detailed = AQ.db.tooltipDetails
     local kind = info.entry.kind
     GameTooltip:SetOwner(owner, anchor or "ANCHOR_RIGHT")
+    ApplyScale()
     local name, sub = AQ.Data.StarterInfo(info.entry)
     -- The giver line: the NPC or object, or for a dropped-item quest the item that starts it.
     GameTooltip:AddLine(name, 1, 1, 1)
@@ -502,6 +555,10 @@ function Pin:OnLoad()
 end
 
 local function Build(self)
+    self.outline = self:CreateTexture(nil, "BACKGROUND")
+    self.outline:SetPoint("TOPLEFT", -2, 2)
+    self.outline:SetPoint("BOTTOMRIGHT", 2, -2)
+    self.outline:SetVertexColor(0, 0, 0)
     self.icon = self:CreateTexture(nil, "ARTWORK")
     self.icon:SetAllPoints()
     self.level = self:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -538,6 +595,11 @@ function Pin:Apply(info)
     self.icon:SetDesaturated(desat)
     self.icon:SetVertexColor(r, g, b)
     self.icon:SetAlpha(alpha)
+    self.outline:SetTexture(tex)
+    self.outline:SetAlpha(alpha * 0.9)
+    self.outline:SetShown(AQ.db.markerOutline and true or false)
+    AQ.ApplyFont(self.level)
+    AQ.ApplyFont(self.badge)
     local label, lr, lg, lb = AQ.PinLabel(info)
     if label then
         self.level:SetText(label)
@@ -646,6 +708,9 @@ local function ContinentOf(id)
     continentOf[id] = found
     return found or nil
 end
+
+AQ.PlayerZone = PlayerZone
+AQ.ContinentOf = ContinentOf
 
 -- A point of `zone` on the (non-stitched) map `host`, going up through the parent maps.
 local function ChainPosition(zone, host, x, y)
@@ -895,7 +960,6 @@ local function CreateMapButton()
     -- quest-type filter, left of it
     local filter = CreateFrame("Button", "AllQuestFilterButton", WorldMapFrame)
     filter:SetSize(22, 22)
-    filter:SetPoint("RIGHT", btn, "LEFT", -4, 0)
     filter:SetFrameLevel(anchor:GetFrameLevel() + 50)
     filter.icon = filter:CreateTexture(nil, "ARTWORK")
     filter.icon:SetAllPoints()
@@ -910,6 +974,36 @@ local function CreateMapButton()
     end)
     filter:SetScript("OnLeave", function() GameTooltip:Hide() end)
     Pins.filterButton = filter
+
+    -- the quest list, next to it
+    local list = CreateFrame("Button", "AllQuestListButton", WorldMapFrame)
+    list:SetSize(22, 22)
+    list:SetFrameLevel(anchor:GetFrameLevel() + 50)
+    list.icon = list:CreateTexture(nil, "ARTWORK")
+    list.icon:SetAllPoints()
+    list.icon:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
+    list:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    list:SetScript("OnClick", function() AQ.QuestList.Toggle() end)
+    list:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine(AQ.L["AllQuest quest list"])
+        GameTooltip:AddLine(AQ.L["Search and sort the quests available to you"], 0.7, 0.7, 0.7, true)
+        GameTooltip:Show()
+    end)
+    list:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    Pins.listButton = list
+end
+
+-- The small buttons sit in a row left of the AllQuest button; hidden ones leave no gap.
+local function LayoutMapButtons()
+    local anchor = Pins.button
+    for _, b in ipairs({ Pins.filterButton, Pins.listButton }) do
+        if b and b:IsShown() then
+            b:ClearAllPoints()
+            b:SetPoint("RIGHT", anchor, "LEFT", -4, 0)
+            anchor = b
+        end
+    end
 end
 
 function AQ.UpdateMapButton()
@@ -922,6 +1016,8 @@ function AQ.UpdateMapButton()
     if filter then
         local db = AQ.db
         filter:SetShown(db.showFilterButton and true or false)
+        if Pins.listButton then Pins.listButton:SetShown(db.showListButton and true or false) end
+        LayoutMapButtons()
         -- orange while something is filtered out
         local filtering = next(db.hiddenTypes) ~= nil or not (db.showDungeonQuests and db.showDropQuests
             and db.showRepeatable and db.showEventQuests)

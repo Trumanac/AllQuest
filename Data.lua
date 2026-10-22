@@ -65,7 +65,19 @@ function Data.StarterInfo(entry)
     return "Dungeon: " .. (DB.dungeons[id] or ("Area " .. id)), "Quests given inside - enter here"
 end
 
+local englishClient = GetLocale() == "enUS" or GetLocale() == "enGB"
+local titleAsked = {}
+
 function Data.QuestName(id)
+    -- other languages: the game's own title once it has it (the database names are English)
+    if not englishClient and C_QuestLog and C_QuestLog.GetTitleForQuestID then
+        local title = C_QuestLog.GetTitleForQuestID(id)
+        if title and title ~= "" then return title end
+        if not titleAsked[id] and C_QuestLog.RequestLoadQuestByID then
+            titleAsked[id] = true
+            pcall(C_QuestLog.RequestLoadQuestByID, id)
+        end
+    end
     local d = DB.quests[id]
     if d then return d[1] end
     local l = AQ.shared.learned[id]
@@ -90,6 +102,26 @@ function Data.ItemDrops(itemId)
     return lines, it[3]
 end
 
+-- Which quests each quest unlocks (the reverse of the prerequisite lists), built on first use.
+local unlocks
+local function Unlocks()
+    if unlocks then return unlocks end
+    unlocks = {}
+    for qid, d in pairs(DB.quests) do
+        for _, list in ipairs({ d[8] or {}, d[9] or {} }) do
+            for _, p in ipairs(list) do
+                if p > 0 then
+                    local t = unlocks[p]
+                    if not t then t = {} unlocks[p] = t end
+                    t[#t + 1] = qid
+                end
+            end
+        end
+    end
+    for _, t in pairs(unlocks) do table.sort(t) end
+    return unlocks
+end
+
 -- Quest record for this character, or nil when the race/class cannot take the quest.
 local recs = {}
 local function Rec(id)
@@ -108,6 +140,55 @@ local function Rec(id)
     }
     recs[id] = r
     return r
+end
+
+-- The quest before and after `id` in its chain, for the details panel: two lists { name, more } or nil.
+-- "After" is what has to be done first, "next" what it opens up for this character.
+function Data.Chain(id)
+    local d = DB.quests[id]
+    if not d then return end
+    local before = d[8] or d[9]
+    local prev, nxt
+    if before and #before > 0 then
+        local first
+        for _, p in ipairs(before) do
+            if p > 0 and not first then first = p end
+        end
+        if first then prev = { name = Data.QuestName(first), more = #before - 1 } end
+    end
+    local after = Unlocks()[id]
+    if after then
+        local first, count = nil, 0
+        for _, q in ipairs(after) do
+            if Rec(q) then
+                count = count + 1
+                first = first or q
+            end
+        end
+        if first then nxt = { name = Data.QuestName(first), more = count - 1 } end
+    end
+    if prev or nxt then return prev, nxt end
+end
+
+-- Every quest hidden through a hidden chain: the chain's first quest and all that follow from it.
+local chainHidden
+function Data.DirtyIgnored() chainHidden = nil end
+
+local function ChainHidden()
+    if chainHidden then return chainHidden end
+    chainHidden = {}
+    local queue = {}
+    for root in pairs(AQ.shared.ignored.chains) do queue[#queue + 1] = root end
+    local index = 1
+    while queue[index] do
+        local id = queue[index]
+        index = index + 1
+        if not chainHidden[id] then
+            chainHidden[id] = true
+            for _, nextId in ipairs(Unlocks()[id] or {}) do queue[#queue + 1] = nextId end
+        end
+    end
+    return chainHidden
 end
 
 -- Quests the player has been offered in game that the bundled database lacks (or lacks that giver for):
@@ -351,6 +432,8 @@ function Data.GetPins(uiMapId)
     }
     local db = ctx.db
     local ignored = AQ.shared.ignored
+    if ignored.zones[uiMapId] then return pins end
+    local chainHidden = ChainHidden()
     for _, entry in ipairs(Entries(uiMapId)) do
       if not ((entry.kind == "d" and not db.showDungeonQuests)
               or (entry.kind == "i" and not db.showDropQuests)
@@ -358,7 +441,7 @@ function Data.GetPins(uiMapId)
         local shown, top
         for _, q in ipairs(entry.quests) do
             local level, locked, trivial
-            if not ignored.quests[q.id] then level, locked, trivial = Evaluate(q, ctx) end
+            if not (ignored.quests[q.id] or chainHidden[q.id]) then level, locked, trivial = Evaluate(q, ctx) end
             if level then
                 local item = { id = q.id, level = level, locked = locked, trivial = trivial, rep = q.rep,
                     tag = q.tag, cls = q.cls, prof = q.sk ~= nil, ev = q.ev,

@@ -13,8 +13,10 @@ It doesn't track your active quests or tell you how to complete them. It answers
 - **Smart markers** on the world map *and* the minimap, only for quests available to your character
 - **Difficulty colours** that match the game's own scale (red / orange / yellow / green / grey, blue for repeatables)
 - **Quest-type letters** on each marker: **G** group, **D** dungeon, **R** raid, **P** PvP, **C** class, **T** profession, **H** heroic, **L** legendary, **S** escort, **E** world event, **i** dropped item
-- **Rich hover panel**: giver, every quest's level and name, type, requirements, and what drops a quest-starting item
-- **Click a marker** to set a waypoint; **right-click** to hide a quest or giver you don't care about
+- **Rich hover panel**: giver, every quest's level and name, type, requirements, what drops a quest-starting item, and the quest before and after it in a chain
+- **Quest list** with search, sorting (level, name, distance, zone) and type filters; click a row for a waypoint
+- **New-quest notice**: a chat message when a level-up or a turned-in quest opens up new quests (can be switched off)
+- **Click a marker** to set a waypoint; **right-click** to hide a quest, a quest chain, a giver or a whole zone; bring them back from the options
 - **Quick presets** (Minimal, Detailed, Show All) - or save your own
 
 ## Quests the usual map misses
@@ -37,6 +39,7 @@ AllQuest works with **OpenMap**. Markers sit correctly on its zoomable, borderle
 - **"Only my current zone"** mode for a cleaner map
 - **Colour-blind palette**, plus an optional **+3 / -2** difficulty number under each marker for when colour isn't enough
 - **Profiles** per character, and **export / import** of your settings as a text string
+- **Display options:** three marker shapes, an optional dark outline, marker opacity, text size on markers and the size of the quest panel
 - Marker size, minimap button, and an option to hide Blizzard's objective tracker
 - A short basic page, with everything else tucked under **Advanced**
 - Translated into **German, French and Spanish** (first drafts - corrections welcome)
@@ -45,7 +48,7 @@ AllQuest works with **OpenMap**. Markers sit correctly on its zoomable, borderle
 
 Install, log in, open the world map - the markers are already there. Type `/aq` (or right-click the AllQuest button on the map or minimap) for options.
 
-**Useful commands:** `/aq preset <name>` loads a preset - `/aq profile <name>` switches profile - `/aq toggle` turns markers on/off - `/aq restore` un-hides everything hidden - `/aq status` shows what's loaded and how old the quest data is.
+**Useful commands:** `/aq list` opens the quest list - `/aq preset <name>` loads a preset - `/aq profile <name>` switches profile - `/aq toggle` turns markers on/off - `/aq restore` un-hides everything hidden - `/aq status` shows what's loaded and how old the quest data is.
 
 ## Good to know
 

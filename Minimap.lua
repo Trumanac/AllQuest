@@ -20,6 +20,10 @@ local function Acquire()
     if not f then
         f = CreateFrame("Frame", nil, Minimap)
         f:SetFrameLevel(Minimap:GetFrameLevel() + 5)
+        f.outline = f:CreateTexture(nil, "BACKGROUND")
+        f.outline:SetPoint("TOPLEFT", -1.5, 1.5)
+        f.outline:SetPoint("BOTTOMRIGHT", 1.5, -1.5)
+        f.outline:SetVertexColor(0, 0, 0)
         f.icon = f:CreateTexture(nil, "ARTWORK")
         f.icon:SetAllPoints()
         f.level = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -117,6 +121,16 @@ local function NearbyMaps()
     return list
 end
 
+-- Distance in yards from the player to a giver spot (entry.map is its zone), nil when it cannot be told.
+function M.Distance(entry)
+    if not entry.map then return end
+    local instance, wx, wy = WorldPos(entry, entry.map)
+    local py, px, _, playerInstance = UnitPosition("player")
+    if not (instance and px and instance == playerInstance) then return end
+    local dx, dy = px - wx, py - wy
+    return math.sqrt(dx * dx + dy * dy)
+end
+
 function M.Rebuild()
     ReleaseAll()
     currentMaps = nil
@@ -138,6 +152,11 @@ function M.Rebuild()
                 f.icon:SetDesaturated(desat)
                 f.icon:SetVertexColor(r, g, b)
                 f.icon:SetAlpha(alpha)
+                f.outline:SetTexture(tex)
+                f.outline:SetAlpha(alpha * 0.9)
+                f.outline:SetShown(db.markerOutline and true or false)
+                AQ.ApplyFont(f.level)
+                AQ.ApplyFont(f.badge)
                 -- the same type letter and level / difficulty text as on the world map, when those are on
                 if badge then f.badge:SetText(badge) f.badge:Show() else f.badge:Hide() end
                 local label, lr, lg, lb = AQ.PinLabel(info)
@@ -229,6 +248,8 @@ function M.RegisterButton()
         OnClick = function(_, button)
             if button == "RightButton" then
                 AQ.ToggleOptions()
+            elseif button == "MiddleButton" then
+                AQ.QuestList.Toggle()
             else
                 AQ.db.enabled = not AQ.db.enabled
                 AQ.SettingsChanged()
@@ -241,6 +262,7 @@ function M.RegisterButton()
             AQ.AddZoneCount(tt)
             tt:AddLine(L["Left-click: toggle markers"], 0.7, 0.7, 0.7)
             tt:AddLine(L["Right-click: options"], 0.7, 0.7, 0.7)
+            tt:AddLine(L["Middle-click: quest list"], 0.7, 0.7, 0.7)
             tt:AddLine(L["Drag: move around the minimap"], 0.7, 0.7, 0.7)
             AQ.AddKeyLines(tt)
         end,

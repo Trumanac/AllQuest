@@ -13,6 +13,24 @@ local ROW_CHECK, ROW_STEP, GAP = 24, 26, 8
 ---------------------------------------------------------------------------------------------
 -- Row builders (a builder keeps the parent frame and the running vertical position)
 
+-- A dropdown frame (also used by the quest list). text() is the closed box's text, setup(root) fills the menu;
+-- clients without the modern dropdown get a button that calls step() instead. dd.Update() refreshes the text.
+function AQ.NewDropdown(parent, width, text, setup, step)
+    local ok, dd = pcall(CreateFrame, "DropdownButton", nil, parent, "WowStyle1DropdownTemplate")
+    if ok and dd and dd.SetupMenu then
+        dd:SetupMenu(function(_, root) setup(root) end)
+    else
+        dd = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+        dd:SetHeight(24)
+        dd.OverrideText = dd.SetText
+        dd:SetScript("OnClick", step)
+    end
+    dd:SetWidth(width)
+    dd.Update = function() dd:OverrideText(text()) end
+    dd.Update()
+    return dd
+end
+
 local function NewBuilder(parent, startY)
     local B = { parent = parent, y = startY, updates = {} }
 
@@ -91,18 +109,9 @@ local function NewBuilder(parent, startY)
     -- A dropdown. text() is the closed box's text, setup(root) fills the menu; clients without the modern
     -- dropdown get a button that calls step() instead. Returns the frame.
     function B:Dropdown(x, width, text, setup, step)
-        local ok, dd = pcall(CreateFrame, "DropdownButton", nil, self.parent, "WowStyle1DropdownTemplate")
-        if ok and dd and dd.SetupMenu then
-            dd:SetupMenu(function(_, root) setup(root) end)
-        else
-            dd = CreateFrame("Button", nil, self.parent, "UIPanelButtonTemplate")
-            dd:SetHeight(24)
-            dd.OverrideText = dd.SetText
-            dd:SetScript("OnClick", step)
-        end
+        local dd = AQ.NewDropdown(self.parent, width, text, setup, step)
         dd:SetPoint("TOPLEFT", x, self.y)
-        dd:SetWidth(width)
-        self.updates[#self.updates + 1] = function() dd:OverrideText(text()) end
+        self.updates[#self.updates + 1] = dd.Update
         return dd
     end
 
@@ -301,6 +310,8 @@ local function Fill(B, resize)
     B:Check("Show minimap button", function() return not AQ.shared.minimap.hide end,
         function(v) AQ.shared.minimap.hide = not v; AQ.Minimap.ApplyButton() end)
 
+    B:Button("Open the quest list", function() AQ.QuestList.Toggle() end, 170)
+
     -- the fold-away part
     local toggle = CreateFrame("Button", nil, B.parent, "UIPanelButtonTemplate")
     toggle:SetSize(200, 22)
@@ -344,11 +355,45 @@ local function Fill(B, resize)
     Stepper(A, "World map marker size", "iconScale", 0.1, 0.5, 2.0, "%.1f")
     A:Dynamic(function() return AQ.LegendText() end, 34)
 
+    A:Header("Display")
+    local STYLES = { { "exclaim", "Exclamation" }, { "diamond", "Diamond" }, { "round", "Round" } }
+    local function StyleName()
+        for _, s in ipairs(STYLES) do
+            if s[1] == AQ.db.markerStyle then return L[s[2]] end
+        end
+        return L["Exclamation"]
+    end
+    local shape = A.parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    shape:SetPoint("TOPLEFT", 20, A.y - 5)
+    shape:SetText(L["Marker shape"])
+    A:Dropdown(150, 150, StyleName, function(root)
+        for _, s in ipairs(STYLES) do
+            root:CreateRadio(L[s[2]], function() return AQ.db.markerStyle == s[1] end,
+                function() AQ.db.markerStyle = s[1] AQ.SettingsChanged() end)
+        end
+    end, function()
+        for i, s in ipairs(STYLES) do
+            if s[1] == AQ.db.markerStyle then
+                AQ.db.markerStyle = STYLES[i % #STYLES + 1][1]
+                break
+            end
+        end
+        AQ.SettingsChanged()
+    end)
+    A.y = A.y - 30
+    Check(A, "Dark outline around markers", "markerOutline",
+        "Draws a thin dark outline behind every marker so it stands out on bright or busy maps.")
+    Stepper(A, "Marker opacity", "markerAlpha", 0.1, 0.3, 1.0, "%.1f")
+    Stepper(A, "Text size on markers", "labelSize", 1, 8, 16, "%d")
+    Stepper(A, "Quest panel size", "tooltipScale", 0.1, 0.7, 1.6, "%.1f")
+
     A:Header("Quest panel (on hover)")
     Check(A, "Show the panel on world map markers", "showTooltips",
         "Hovering a world map marker shows what it offers. Off: the markers ignore the mouse completely.")
     Check(A, "Show full details in the panel", "tooltipDetails",
         "On: type, requirements, what drops an item and more. Off: just the giver and each quest's level and name.")
+    Check(A, "Show the quest chain (before / next) in the panel", "showChainInfo",
+        "One extra line naming the quest that comes before and the quest it unlocks. Only in the detailed panel.")
     Check(A, "Show the panel on minimap markers", "minimapTooltips",
         "Hovering a minimap marker shows the same quest panel. Off: minimap markers do not catch the mouse at all.")
 
@@ -366,6 +411,8 @@ local function Fill(B, resize)
     Check(A, "Show the whole continent when zoomed in (OpenMap)", "wholeContinent",
         "With OpenMap's seamless map, markers for the whole continent are loaded while you are zoomed in, so nothing pops in as you move around. Zoomed out, only your own zone shows. Off: only the zone you are viewing and your own.")
 
+    Check(A, "Show the quest list button on the world map", "showListButton",
+        "A small book button next to the AllQuest button that opens the quest list. The list also opens with /aq list or a middle-click on the minimap button.")
     Check(A, "Hide far markers while zooming if the frame rate drops (OpenMap)", "zoomSafeguard",
         "Only acts when the frame rate is low while you zoom or pan the seamless map: markers outside your own zone are hidden until the view settles.")
 
@@ -377,6 +424,10 @@ local function Fill(B, resize)
     A:Stepper("Button angle (degrees)", function() return AQ.shared.minimap.minimapPos or 215 end,
         function(v) AQ.shared.minimap.minimapPos = v % 360; AQ.Minimap.ApplyButton() end, 15, -1000, 1000, "%d")
     A:Button("Reset button position", AQ.Minimap.ResetButton)
+
+    A:Header("Notices")
+    Check(A, "Tell me when new quests become available", "notifyNewQuests",
+        "A chat message after a level-up or a turned-in quest opens up new quests, naming the first few.")
 
     A:Header("Hidden quests and givers")
     A:Dynamic(function()
@@ -391,7 +442,8 @@ local function Fill(B, resize)
             return
         end
         for _, item in ipairs(list) do
-            root:CreateButton((item.kind == "quest" and L["Quest"] or L["Giver"]) .. ": " .. item.name,
+            local kindName = ({ quest = "Quest", giver = "Giver", zone = "Zone", chain = "Chain" })[item.kind]
+            root:CreateButton(L[kindName] .. ": " .. item.name,
                 function() AQ.Unignore(item.kind, item.key) end)
         end
     end, function() end)
@@ -401,6 +453,11 @@ local function Fill(B, resize)
     restoreAll:SetPoint("LEFT", restore, "RIGHT", 6, 0)
     restoreAll:SetScript("OnClick", AQ.RestoreAllIgnored)
     A.y = A.y - 30
+    A:Button("Hide the zone I'm in", function()
+        local zone = AQ.PlayerZone()
+        local info = zone and C_Map.GetMapInfo(zone)
+        if info and info.name then AQ.IgnoreZone(zone, info.name) end
+    end, 170)
 
     A:Header("Profile and sharing")
     A:Dynamic(function()

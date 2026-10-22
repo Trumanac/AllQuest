@@ -24,6 +24,14 @@ AQ.defaults = {
     showFilterButton = true, -- small quest-type filter button on the world map
     hiddenTypes = {},        -- quest types switched off in the filter: type name -> true
     zoomSafeguard = true,    -- OpenMap: hide far markers while zooming when the frame rate drops
+    notifyNewQuests = true,  -- chat message when a level-up or a turned-in quest makes new quests available
+    showChainInfo = true,    -- one line in the quest panel: the quest before and after in its chain
+    showListButton = true,   -- button on the world map that opens the quest list
+    markerStyle = "exclaim", -- marker shape: exclaim, diamond, round
+    markerOutline = false,   -- dark outline behind markers, for contrast
+    markerAlpha = 1.0,       -- marker opacity
+    labelSize = 10,          -- size of the text under and on markers
+    tooltipScale = 1.0,      -- size of the quest panel
 }
 
 -- Kept once for the whole account (not per profile).
@@ -208,6 +216,8 @@ local function InitDB()
     end
     S.ignored.quests = S.ignored.quests or {}
     S.ignored.givers = S.ignored.givers or {}
+    S.ignored.zones = S.ignored.zones or {}
+    S.ignored.chains = S.ignored.chains or {}
     if type(S.custom) == "table" then                    -- the single "Custom" slot of 0.8.0 - 0.8.2
         S.presets.Custom = S.presets.Custom or S.custom
     end
@@ -304,36 +314,59 @@ function AQ.IgnoreGiver(key, name)
     AQ.SettingsChanged()
 end
 
--- List of { kind = "quest"|"giver", key, name }, sorted by name.
+function AQ.IgnoreZone(uiMapId, name)
+    AQ.shared.ignored.zones[uiMapId] = name or true
+    AQ.Print(("hid zone: %s (restore it in the options)"):format(tostring(name or uiMapId)))
+    AQ.SettingsChanged()
+end
+
+-- A chain: the quest and every quest that follows from it.
+function AQ.IgnoreChain(id, name)
+    AQ.shared.ignored.chains[id] = name or true
+    AQ.Data.DirtyIgnored()
+    AQ.Print(("hid quest chain from: %s (restore it in the options)"):format(tostring(name or id)))
+    AQ.SettingsChanged()
+end
+
+local IGNORE_SETS = { quest = "quests", giver = "givers", zone = "zones", chain = "chains" }
+
+-- List of { kind = "quest"|"giver"|"zone"|"chain", key, name }, sorted by name.
 function AQ.IgnoredList()
     local list = {}
-    for id, name in pairs(AQ.shared.ignored.quests) do
-        list[#list + 1] = { kind = "quest", key = id, name = type(name) == "string" and name or ("Quest " .. id) }
+    for kind, setName in pairs(IGNORE_SETS) do
+        for key, name in pairs(AQ.shared.ignored[setName]) do
+            local label = type(name) == "string" and name or (kind .. " " .. tostring(key))
+            list[#list + 1] = { kind = kind, key = key, name = label }
+        end
     end
-    for key, name in pairs(AQ.shared.ignored.givers) do
-        list[#list + 1] = { kind = "giver", key = key, name = type(name) == "string" and name or key }
-    end
-    table.sort(list, function(a, b) return a.name:lower() < b.name:lower() end)
+    table.sort(list, function(a, b)
+        if a.name:lower() ~= b.name:lower() then return a.name:lower() < b.name:lower() end
+        return a.kind < b.kind
+    end)
     return list
 end
 
 function AQ.Unignore(kind, key)
-    local set = kind == "quest" and AQ.shared.ignored.quests or AQ.shared.ignored.givers
+    local set = AQ.shared.ignored[IGNORE_SETS[kind]]
+    if not set then return end
     set[key] = nil
+    if kind == "chain" then AQ.Data.DirtyIgnored() end
     AQ.SettingsChanged()
 end
 
 function AQ.RestoreAllIgnored()
-    AQ.shared.ignored.quests = {}
-    AQ.shared.ignored.givers = {}
-    AQ.Print("restored every hidden quest and giver.")
+    for _, setName in pairs(IGNORE_SETS) do AQ.shared.ignored[setName] = {} end
+    AQ.Data.DirtyIgnored()
+    AQ.Print("restored everything you hid.")
     AQ.SettingsChanged()
 end
 
 ---------------------------------------------------------------------------------------------
 -- Settings as a text string (to share or move to another account)
 
-local RANGES = { iconScale = { 0.5, 2 }, minimapScale = { 0.5, 2.5 }, levelsAbove = { 0, 60 } }
+local RANGES = { iconScale = { 0.5, 2 }, minimapScale = { 0.5, 2.5 }, levelsAbove = { 0, 60 }, markerAlpha = { 0.3, 1 },
+    labelSize = { 8, 16 }, tooltipScale = { 0.7, 1.6 } }
+local MARKER_STYLES = { exclaim = true, diamond = true, round = true }
 local EXPORT_PREFIX = "AQ1"
 
 function AQ.ExportString()
@@ -374,6 +407,8 @@ function AQ.ImportString(text)
         elseif type(default) == "boolean" then
             values[key] = value == "1"
             count = count + 1
+        elseif key == "markerStyle" then
+            if MARKER_STYLES[value] then values[key] = value count = count + 1 end
         elseif type(default) == "number" and tonumber(value) then
             local n = tonumber(value)
             local range = RANGES[key]
@@ -413,11 +448,13 @@ end
 function AQ.RefreshAll()
     if AQ.Pins then AQ.Pins.Refresh() end
     if AQ.Minimap then AQ.Minimap.Rebuild() end
+    if AQ.QuestList then AQ.QuestList.Refresh() end
 end
 
 -- Called after any setting changed.
 function AQ.SettingsChanged()
     AQ.RefreshAll()
+    if AQ.Notify then AQ.Notify.Baseline() end
     if AQ.UpdateMapButton then AQ.UpdateMapButton() end
     if AQ.Minimap then AQ.Minimap.UpdateButton() end
     if AQ.Tracker then AQ.Tracker.Apply() end
@@ -432,6 +469,10 @@ function AQ.RequestRefresh()
     C_Timer.After(0.3, function()
         pending = false
         AQ.RefreshAll()
+        if AQ.Notify then
+            -- a level-up or a turned-in quest may have opened new quests: tell the player, otherwise just note the state
+            if AQ.notifyNext then AQ.notifyNext = false AQ.Notify.Check() else AQ.Notify.Baseline() end
+        end
     end)
 end
 
@@ -472,6 +513,7 @@ frame:SetScript("OnEvent", function(_, event, arg1, arg2)
         AQ.RequestSlowRefresh()
     else
         if event == "PLAYER_LEVEL_UP" then AQ.playerLevel = arg1 end
+        if event == "PLAYER_LEVEL_UP" or event == "QUEST_TURNED_IN" then AQ.notifyNext = true end
         AQ.RequestRefresh()
     end
 end)
@@ -514,6 +556,9 @@ SlashCmdList.ALLQUEST = function(msg)
         else
             AQ.ApplyPreset(arg)
         end
+        return
+    elseif cmd == "list" then
+        AQ.QuestList.Toggle()
         return
     elseif cmd == "restore" then
         AQ.RestoreAllIgnored()
@@ -565,7 +610,7 @@ SlashCmdList.ALLQUEST = function(msg)
         end
         return
     else
-        AQ.Print("/allquest [options|preset|profile|restore|toggle|on|off|all|above N|low|minimap|tracker|events|learned|forget|settings|skills|status]")
+        AQ.Print("/allquest [options|list|preset|profile|restore|toggle|on|off|all|above N|low|minimap|tracker|events|learned|forget|settings|skills|status]")
         return
     end
     AQ.SettingsChanged()
