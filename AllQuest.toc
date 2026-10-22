@@ -1,0 +1,27 @@
+## Interface: 16001
+## Title: AllQuest
+## Notes: Lightweight quest-giver tracker: ! markers on the world map and minimap for quests you can pick up. Self-contained quest database.
+## Author: Super
+## Version: 0.10.0
+## License: GPL-3.0
+## SavedVariables: AllQuestDB
+## IconTexture: Interface\AddOns\AllQuest\images\AllQuest256
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+
+Core.lua
+Locales.lua
+Data\DB_Meta.lua
+Data\DB_Npcs.lua
+Data\DB_Quests.lua
+Data\DB_Maps.lua
+Data.lua
+Events.lua
+Learn.lua
+Pins.lua
+Minimap.lua
+Tracker.lua
+Options.lua
