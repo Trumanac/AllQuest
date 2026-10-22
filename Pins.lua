@@ -800,7 +800,7 @@ function Provider:Draw()
         local pos = wanted[entry]
         info.px, info.py = pos[1], pos[2]
         local pin = live[entry]
-        if not pin then
+        if not pin or not pin.info then      -- none yet, or the map released it behind our back
             pin = map:AcquirePin(TEMPLATE, info)
             live[entry] = pin
         elseif pin.info ~= info then
@@ -838,6 +838,22 @@ local zoneEvents = CreateFrame("Frame")
 zoneEvents:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 zoneEvents:SetScript("OnEvent", function() Pins.RequestDraw() end)
 
+-- How many quests are available in the zone the player stands in (nil: unknown).
+function AQ.ZoneQuestCount()
+    local zone = PlayerZone()
+    if not (zone and AQ.Data.ready) then return end
+    local n = 0
+    for _, info in ipairs(AQ.PinsFor(zone)) do n = n + #info.quests end
+    return n, zone
+end
+
+function AQ.AddZoneCount(tt)
+    local n, zone = AQ.ZoneQuestCount()
+    if not n then return end
+    local info = C_Map.GetMapInfo(zone)
+    tt:AddLine((AQ.L["Available in %s: %d"]):format(info and info.name or "?", n), 0.6, 1, 0.6)
+end
+
 ---------------------------------------------------------------------------------------------
 -- World map on/off button
 
@@ -867,6 +883,7 @@ local function CreateMapButton()
         if not AQ.Data.ready then
             GameTooltip:AddLine(AQ.L["Quest database not loaded"], 1, 0.8, 0)
         end
+        AQ.AddZoneCount(GameTooltip)
         GameTooltip:AddLine(AQ.L["Left-click: toggle"], 0.7, 0.7, 0.7)
         GameTooltip:AddLine(AQ.L["Right-click: options"], 0.7, 0.7, 0.7)
         AQ.AddKeyLines(GameTooltip)

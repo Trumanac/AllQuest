@@ -389,6 +389,15 @@ function AQ.ImportString(text)
     return true, count
 end
 
+-- Every setting of the profile back to its default (hidden quests, saved presets and other profiles stay).
+function AQ.ResetSettings()
+    for k, v in pairs(AQ.defaults) do
+        AQ.db[k] = type(v) == "table" and {} or v
+    end
+    AQ.Print("settings reset to the defaults.")
+    AQ.SettingsChanged()
+end
+
 -- The database is a snapshot of one client build: say so once after the game was patched.
 function AQ.CheckClientBuild()
     local current = select(2, GetBuildInfo())

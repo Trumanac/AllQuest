@@ -78,14 +78,22 @@ end
 
 -- Suggested group sizes: the quest log knows them for the quests you hold; remember them for the markers.
 function Learn.ScanGroupSizes()
-    if not (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo) then return end
     local changed = false
-    for i = 1, C_QuestLog.GetNumQuestLogEntries() do
-        local info = C_QuestLog.GetInfo(i)
-        if info and not info.isHeader and info.questID and info.suggestedGroup and info.suggestedGroup > 1
-            and AQ.shared.groupSizes[info.questID] ~= info.suggestedGroup then
-            AQ.shared.groupSizes[info.questID] = info.suggestedGroup
+    local function Note(questId, size)
+        if questId and size and size > 1 and AQ.shared.groupSizes[questId] ~= size then
+            AQ.shared.groupSizes[questId] = size
             changed = true
+        end
+    end
+    if C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo then
+        for i = 1, C_QuestLog.GetNumQuestLogEntries() do
+            local info = C_QuestLog.GetInfo(i)
+            if info and not info.isHeader then Note(info.questID, info.suggestedGroup) end
+        end
+    elseif GetNumQuestLogEntries and GetQuestLogTitle then
+        for i = 1, GetNumQuestLogEntries() do
+            local _, _, suggestedGroup, isHeader, _, _, _, questId = GetQuestLogTitle(i)
+            if not isHeader then Note(questId, suggestedGroup) end
         end
     end
     if changed then AQ.RequestRefresh() end

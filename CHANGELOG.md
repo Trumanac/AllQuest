@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1
+- Fix: a marker the map released on its own could stay invisible; it is drawn again now.
+- Group sizes are also read with the older quest log API.
+- New: Reset all settings button; the map and minimap button tooltips show how many quests are available in your zone.
+- Pop-up texts are translated.
+
 ## 0.10.0
 - Click a marker to set a waypoint (TomTom if installed, otherwise the game's map pin); right-click to hide a
   quest or a giver. Hidden items can be restored one by one or all at once in the options.

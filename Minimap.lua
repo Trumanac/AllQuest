@@ -238,6 +238,7 @@ function M.RegisterButton()
             tt:AddLine("AllQuest")
             local L = AQ.L
             tt:AddLine(L["Quest markers"] .. ": " .. (AQ.db.enabled and ("|cff00ff00" .. L["on"] .. "|r") or ("|cffff4040" .. L["off"] .. "|r")), 1, 1, 1)
+            AQ.AddZoneCount(tt)
             tt:AddLine(L["Left-click: toggle markers"], 0.7, 0.7, 0.7)
             tt:AddLine(L["Right-click: options"], 0.7, 0.7, 0.7)
             tt:AddLine(L["Drag: move around the minimap"], 0.7, 0.7, 0.7)

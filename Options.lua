@@ -204,7 +204,7 @@ end
 
 -- Asks for a name to save the current settings under.
 StaticPopupDialogs["ALLQUEST_SAVE_PRESET"] = {
-    text = "Name for this AllQuest preset:",
+    text = L["Name for this AllQuest preset:"],
     button1 = ACCEPT,
     button2 = CANCEL,
     hasEditBox = true,
@@ -232,7 +232,7 @@ StaticPopupDialogs["ALLQUEST_SAVE_PRESET"] = {
 local function BoxOf(popup) return popup.EditBox or popup.editBox end
 
 StaticPopupDialogs["ALLQUEST_NEW_PROFILE"] = {
-    text = "Name for the new AllQuest profile (it starts as a copy of your current settings and is used by this character):",
+    text = L["Name for the new AllQuest profile (it starts as a copy of your current settings and is used by this character):"],
     button1 = ACCEPT, button2 = CANCEL, hasEditBox = true, maxLetters = 24, timeout = 0, whileDead = true, hideOnEscape = true,
     OnShow = function(self) local box = BoxOf(self) box:SetText("") box:SetFocus() end,
     OnAccept = function(self) AQ.ProfileCreate(BoxOf(self):GetText()) end,
@@ -241,7 +241,7 @@ StaticPopupDialogs["ALLQUEST_NEW_PROFILE"] = {
 }
 
 StaticPopupDialogs["ALLQUEST_EXPORT"] = {
-    text = "Your AllQuest settings. Copy this text (Ctrl+C):",
+    text = L["Your AllQuest settings. Copy this text (Ctrl+C):"],
     button1 = CLOSE, hasEditBox = true, editBoxWidth = 320, timeout = 0, whileDead = true, hideOnEscape = true,
     OnShow = function(self)
         local box = BoxOf(self)
@@ -259,12 +259,18 @@ local function DoImport(text)
 end
 
 StaticPopupDialogs["ALLQUEST_IMPORT"] = {
-    text = "Paste an AllQuest settings string (Ctrl+V):",
+    text = L["Paste an AllQuest settings string (Ctrl+V):"],
     button1 = ACCEPT, button2 = CANCEL, hasEditBox = true, editBoxWidth = 320, timeout = 0, whileDead = true, hideOnEscape = true,
     OnShow = function(self) local box = BoxOf(self) box:SetText("") box:SetFocus() end,
     OnAccept = function(self) DoImport(BoxOf(self):GetText()) end,
     EditBoxOnEnterPressed = function(box) local popup = box:GetParent() DoImport(box:GetText()) popup:Hide() end,
     EditBoxOnEscapePressed = function(box) box:GetParent():Hide() end,
+}
+
+StaticPopupDialogs["ALLQUEST_RESET"] = {
+    text = L["Reset every AllQuest setting of this profile to the defaults? Hidden quests, saved presets and other profiles are kept."],
+    button1 = YES, button2 = NO, timeout = 0, whileDead = true, hideOnEscape = true,
+    OnAccept = function() AQ.ResetSettings() end,
 }
 
 -- All the settings rows. `resize(height)` tells the host how tall everything is now.
@@ -427,6 +433,8 @@ local function Fill(B, resize)
     A:Header("Interface")
     CheckNot(A, "Show Blizzard's objective tracker", "hideTracker",
         "The quest list on the right side of the screen. Off: AllQuest hides it.")
+
+    A:Button("Reset all settings", function() StaticPopup_Show("ALLQUEST_RESET") end)
 
     local advHeight = -A.y + 10
     adv:SetHeight(advHeight)
