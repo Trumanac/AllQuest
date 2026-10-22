@@ -1,57 +1,54 @@
-**Summary (short):** AllQuest is a lightweight, modular quest-giver tracker for the WoW Forever client. It places ! markers on your world map and minimap for quests you can actually pick up - no bloated trackers, no guides, just clean quest discovery.
+**Summary (short):** AllQuest puts a ! on your world map and minimap for every quest you can actually pick up right now - colour-coded by difficulty, filtered for your character, and nothing else. No tracker, no guide, no clutter.
 
 ---
 
-# AllQuest
+# AllQuest - see every quest that's waiting for you
 
-Find every quest worth picking up, right on the map. AllQuest shows a **!** marker for each quest giver that has a quest *you* can accept - filtered for your level, race, class, completed quests, prerequisites, professions, reputation and the current holidays. It doesn't track your active quests or tell you how to do them. It answers one question: **"what quests are available around me?"**
+Ever run through a zone and only later find out you walked right past three quests? AllQuest fixes that. It marks each quest giver who has something **you** can accept, and hides everything you can't: wrong level, wrong race or class, already done, missing prerequisite, missing profession or reputation, or a holiday that isn't running.
 
-It is fully self-contained: it ships with its own quest database and needs no other addon.
+It doesn't track your active quests or tell you how to complete them. It answers one question: **"what quests are available around me?"** - and it works out of the box, with its own built-in quest database and no other addon required.
 
-## Features
+## At a glance
 
-**Markers**
-- World map and minimap markers for quest givers (NPCs and objects)
-- **Dungeon quests** shown at the dungeon entrance, tagged **D**
-- **Dropped-item quests** shown where the item drops, tagged **i**
-- Holiday quests appear only while the holiday is running (read from the in-game calendar)
-- Works with **OpenMap**: markers sit correctly on its seamless zoomable map, and zooming in loads the whole continent so nothing pops in as you pan
-- Optional **"only my current zone"** mode
-- Several givers on the same spot? The hover panel cycles through them
-- Optional zoom safeguard: with a low frame rate, far markers are hidden while you zoom the seamless map
+- **Smart markers** on the world map *and* the minimap, only for quests available to your character
+- **Difficulty colours** that match the game's own scale (red / orange / yellow / green / grey, blue for repeatables)
+- **Quest-type letters** on each marker: **G** group, **D** dungeon, **R** raid, **P** PvP, **C** class, **T** profession, **H** heroic, **L** legendary, **S** escort, **E** world event, **i** dropped item
+- **Rich hover panel**: giver, every quest's level and name, type, requirements, and what drops a quest-starting item
+- **Click a marker** to set a waypoint; **right-click** to hide a quest or giver you don't care about
+- **Quick presets** (Minimal, Detailed, Show All) - or save your own
 
-**Know at a glance**
-- Marker colour follows the game's own difficulty scale: red (5+ above you), orange (3-4), yellow (close to your level), green (below), grey (trivial), blue (repeatable); faded while you are too low level to accept it
-- **Colour-blind palette** plus an optional **+3 / -2 level number** under each marker, for when colour isn't enough
-- Quest-type letters on the marker: **C** class, **D** dungeon, **E** world event, **G** group, **H** heroic, **i** dropped item, **L** legendary, **P** PvP, **R** raid, **S** escort, **T** profession
-- Hover a marker (world map or minimap) for a panel with the giver, each quest's level and name, its type, level / class / skill / reputation requirements, and for item quests what drops it and how often
-- Group quests show the suggested group size when it is known
-- Hover the AllQuest button on the map or minimap for a colour and letter key
+## Quests the usual map misses
 
-**Click a marker**
-- **Left-click:** set a waypoint (uses TomTom if you have it, otherwise the game's map pin)
-- **Right-click:** hide a quest or a whole giver; bring them back anytime from the options
+- **Dungeon quests** appear at the dungeon entrance, so you know a quest is waiting inside
+- **Dropped-item quests** appear where the item drops, with who drops it and how often
+- **Holiday quests** show up only while the holiday is actually running (read from the in-game calendar)
+- **Group quests** are labelled, with the suggested group size when known
+- **Learns as you play**: if a giver offers a quest the built-in database doesn't know, AllQuest remembers it from then on
 
-**Filters**
-- A **quest-type filter button** on the world map: switch Group, Class, PvP, Raid, Heroic, Legendary, Escort, Profession, dungeon, dropped-item, repeatable and holiday quests on or off (can be hidden)
-- Show quests up to X levels above you (or every level), hide grey quests, repeatable quests on/off
-- Hide quests that need a profession skill or reputation you don't have (each can be switched off)
-- Minimap markers for every nearby zone, not just the one you stand in
+## Made for a seamless map (OpenMap)
 
-**Settings made simple**
-- **Presets:** Minimal, Detailed, Show All - or save your own under any name and load it from a dropdown
-- A short basic page, and an **Advanced** section for every option
+AllQuest works with **OpenMap**. Markers sit correctly on its zoomable, borderless map, and zooming in loads the whole continent so nothing pops in as you pan. If your frame rate dips while zooming, an optional safeguard hides far-away markers until the view settles. Several givers on one spot? The hover panel cycles through them.
+
+## Yours to tune
+
+- Show quests up to **X levels above you** (the default of 4 covers yellow and orange), or every level
+- Hide grey quests, repeatables, or quests needing a skill or reputation you don't have
+- A **quest-type filter button** on the world map to switch whole categories on and off - hide it if you don't want it
+- **"Only my current zone"** mode for a cleaner map
+- **Colour-blind palette**, plus an optional **+3 / -2** difficulty number under each marker for when colour isn't enough
 - **Profiles** per character, and **export / import** of your settings as a text string
+- Marker size, minimap button, and an option to hide Blizzard's objective tracker
+- A short basic page, with everything else tucked under **Advanced**
 - Translated into **German, French and Spanish** (first drafts - corrections welcome)
-- Minimap button (drag, lock, hide), world map on/off button, option to hide Blizzard's objective tracker
 
-**Learns as you play:** if a quest giver offers a quest the built-in database doesn't know, AllQuest remembers it and shows it from then on.
+## Getting started
 
-## Commands
-`/allquest` or `/aq` opens the options.
-`/aq preset <name>` loads a preset, `/aq profile <name>` switches profile, `/aq restore` un-hides everything, `/aq toggle` turns markers on/off, `/aq all`, `/aq above <n>`, `/aq low`, `/aq minimap`, `/aq tracker`, `/aq events`, `/aq status`.
+Install, log in, open the world map - the markers are already there. Type `/aq` (or right-click the AllQuest button on the map or minimap) for options.
 
-## Notes
-- Quest and NPC names in the database are English. The built-in database is a snapshot; quests added later are picked up by the learning feature.
-- Quest availability is worked out from the quest data (levels, races, classes, prerequisites, skills, reputation). A few hidden conditions can't be known, so an occasional marker may not be takeable.
-- Open source (GPL-3.0). Bug reports and suggestions welcome.
+**Useful commands:** `/aq preset <name>` loads a preset - `/aq profile <name>` switches profile - `/aq toggle` turns markers on/off - `/aq restore` un-hides everything hidden - `/aq status` shows what's loaded and how old the quest data is.
+
+## Good to know
+
+- Quest and NPC names in the database are English. The database is a snapshot, so quests added by later patches are picked up by the learning feature as you meet their givers.
+- Availability is worked out from the quest data (levels, races, classes, prerequisites, skills, reputation). A few hidden conditions can't be known, so an occasional marker may not be takeable.
+- Free and open source (GPL-3.0). Bug reports and suggestions are very welcome.
