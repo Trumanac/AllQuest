@@ -5,7 +5,7 @@
 #
 # Actions tab -> "Package and release" -> "Run workflow" picks the targets by hand:
 #   tag      an existing tag to build (e.g. v1.0.0); empty = the newest commit on the chosen branch
-#   targets  none (test build: the zip is attached to the run) or curseforge
+#   targets  none (test build: the zip is attached to the run), all, curseforge (only) or wago (only)
 #   github   also create / update the GitHub release for that tag
 name: Package and release
 
@@ -24,7 +24,9 @@ on:
         type: choice
         options:
           - none
+          - all
           - curseforge
+          - wago
         default: none
       github:
         description: "Also create/update the GitHub release"
@@ -49,6 +51,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           TARGETS: ${{ inputs.targets }}
           TAG: ${{ inputs.tag }}
+          WAGO_ID: x61xMxN1
         run: |
           args=""
           if [ "$EVENT" = "workflow_dispatch" ]; then
@@ -57,6 +60,9 @@ jobs:
             elif [ -z "$TAG" ]; then
               echo "::error::Uploading needs a tag (e.g. v1.0.0). Leave targets on 'none' for a test build."
               exit 1
+            elif [ "$TARGETS" != "curseforge" ]; then
+              # older tags have no ## X-Wago-ID in their TOC, so give the id explicitly
+              args="-a $WAGO_ID"
             fi
           fi
           echo "args=$args" >> "$GITHUB_OUTPUT"
@@ -66,8 +72,9 @@ jobs:
         with:
           args: ${{ steps.opts.outputs.args }}
         env:
-          CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          # A site is skipped when its token is empty: a pushed tag uploads everywhere, a manual run only where chosen.
+          CF_API_KEY: ${{ (github.event_name == 'push' || inputs.targets == 'all' || inputs.targets == 'curseforge') && secrets.CF_API_KEY || '' }}
+          WAGO_API_TOKEN: ${{ (github.event_name == 'push' || inputs.targets == 'all' || inputs.targets == 'wago') && secrets.WAGO_API_TOKEN || '' }}
           # GitHub releases: always for a pushed tag, otherwise only when "github" is ticked
           GITHUB_OAUTH: ${{ (github.event_name == 'push' || inputs.github) && secrets.GITHUB_TOKEN || '' }}
 
