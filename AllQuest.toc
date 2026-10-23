@@ -2,7 +2,7 @@
 ## Title: AllQuest
 ## Notes: Lightweight quest-giver tracker: ! markers on the world map and minimap for quests you can pick up. Self-contained quest database.
 ## Author: Super
-## Version: 1.0.1-beta
+## Version: 1.0.1
 ## License: GPL-3.0
 ## X-Curse-Project-ID: 1760152
 ## X-Wago-ID: x61xMxN1

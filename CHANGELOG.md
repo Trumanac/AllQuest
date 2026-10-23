@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1-beta
+## 1.0.1
 - Quest list is now a sortable table: Level, Quest, Giver, Zone, Distance, XP, Money and Rewards columns. Click a header
   to sort (click again to flip the direction); the Columns button switches columns on and off. Choices are remembered.
 - Quest list: the sort menu lists every column, has an ascending / descending button, and unknown values sort last.
