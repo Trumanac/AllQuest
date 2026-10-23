@@ -9,6 +9,7 @@ local builders = {}      -- one per place the controls were built, so each can b
 
 local L = AQ.L
 local ROW_CHECK, ROW_STEP, GAP = 24, 26, 8
+local WIDTH = 470          -- width of the settings content (the standalone window is a bit wider)
 
 ---------------------------------------------------------------------------------------------
 -- Row builders (a builder keeps the parent frame and the running vertical position)
@@ -47,6 +48,8 @@ local function NewBuilder(parent, startY)
         cb:SetPoint("TOPLEFT", 14, self.y + 4)
         cb.label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         cb.label:SetPoint("LEFT", cb, "RIGHT", 2, 1)
+        cb.label:SetWidth(WIDTH - 64)
+        cb.label:SetJustifyH("LEFT")
         cb.label:SetText(L[label])
         cb:SetScript("OnClick", function(btn)
             set(btn:GetChecked() and true or false)
@@ -61,7 +64,8 @@ local function NewBuilder(parent, startY)
             cb:SetScript("OnLeave", function() GameTooltip:Hide() end)
         end
         self.updates[#self.updates + 1] = function() cb:SetChecked(get()) end
-        self.y = self.y - ROW_CHECK
+        local textHeight = cb.label:GetStringHeight()
+        self.y = self.y - math.max(ROW_CHECK, (type(textHeight) == "number" and textHeight or 0) + 8)
     end
 
     function B:Stepper(label, get, set, step, min, max, format, disabledWhen)
@@ -71,7 +75,7 @@ local function NewBuilder(parent, startY)
         local minus = CreateFrame("Button", nil, self.parent, "UIPanelButtonTemplate")
         minus:SetSize(24, 22)
         minus:SetText("-")
-        minus:SetPoint("TOPLEFT", 210, self.y)
+        minus:SetPoint("TOPLEFT", WIDTH - 190, self.y)
         local value = self.parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         value:SetPoint("LEFT", minus, "RIGHT", 0, 0)
         value:SetWidth(44)
@@ -198,7 +202,7 @@ local function NewBuilder(parent, startY)
     function B:Dynamic(get, height)
         local fs = self.parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         fs:SetPoint("TOPLEFT", 18, self.y - 2)
-        fs:SetWidth(300)
+        fs:SetWidth(WIDTH - 40)
         fs:SetJustifyH("LEFT")
         self.updates[#self.updates + 1] = function() fs:SetText(get()) end
         self.y = self.y - (height or 30)
@@ -319,7 +323,7 @@ local function Fill(B, resize)
     local baseY = B.y - 10 - ROW_STEP
     local adv = CreateFrame("Frame", nil, B.parent)
     adv:SetPoint("TOPLEFT", 0, baseY)
-    adv:SetWidth(340)
+    adv:SetWidth(WIDTH)
     local A = NewBuilder(adv, 0)
 
     A:Header("Which quests to show")
@@ -413,7 +417,7 @@ local function Fill(B, resize)
 
     Check(A, "Show the quest list button on the world map", "showListButton",
         "A small book button next to the AllQuest button that opens the quest list. The list also opens with /aq list or a middle-click on the minimap button.")
-    Check(A, "Hide far markers while zooming if the frame rate drops (OpenMap)", "zoomSafeguard",
+    Check(A, "Hide far markers while zooming when it lags (OpenMap)", "zoomSafeguard",
         "Only acts when the frame rate is low while you zoom or pan the seamless map: markers outside your own zone are hidden until the view settles.")
 
     A:Header("Minimap")
@@ -424,6 +428,38 @@ local function Fill(B, resize)
     A:Stepper("Button angle (degrees)", function() return AQ.shared.minimap.minimapPos or 215 end,
         function(v) AQ.shared.minimap.minimapPos = v % 360; AQ.Minimap.ApplyButton() end, 15, -1000, 1000, "%d")
     A:Button("Reset button position", AQ.Minimap.ResetButton)
+
+    A:Header("Waypoints")
+    local WAYPOINT_MODES = { { "smart", "Smart (recommended)" }, { "arrow", "Always move the arrow" }, { "marker", "Mark the map only" } }
+    local function ModeName()
+        for _, m in ipairs(WAYPOINT_MODES) do
+            if m[1] == AQ.db.waypointMode then return L[m[2]] end
+        end
+        return L["Smart (recommended)"]
+    end
+    local when = A.parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    when:SetPoint("TOPLEFT", 20, A.y - 5)
+    when:SetText(L["When I click a marker"])
+    A:Dropdown(190, 220, ModeName, function(root)
+        for _, m in ipairs(WAYPOINT_MODES) do
+            root:CreateRadio(L[m[2]], function() return AQ.db.waypointMode == m[1] end,
+                function() AQ.db.waypointMode = m[1] AQ.SettingsChanged() end)
+        end
+    end, function()
+        for i, m in ipairs(WAYPOINT_MODES) do
+            if m[1] == AQ.db.waypointMode then
+                AQ.db.waypointMode = WAYPOINT_MODES[i % #WAYPOINT_MODES + 1][1]
+                break
+            end
+        end
+        AQ.SettingsChanged()
+    end)
+    A.y = A.y - 30
+    A:Dynamic(function()
+        local text = L["Smart: the arrow moves only if nothing else is using it. Shift-click always points the arrow."]
+        if _G.QuestPilot then text = L["Quest Pilot found."] .. " " .. text end
+        return text
+    end, 34)
 
     A:Header("Notices")
     Check(A, "Tell me when new quests become available", "notifyNewQuests",
@@ -477,10 +513,10 @@ local function Fill(B, resize)
     deleteProfile:SetScript("OnClick", function() AQ.ProfileDelete(AQ.ProfileName()) end)
     A.updates[#A.updates + 1] = function() deleteProfile:SetShown(AQ.ProfileName() ~= "Default") end
     A.y = A.y - 30
+    A:Buttons({ { "New profile...", function() StaticPopup_Show("ALLQUEST_NEW_PROFILE") end, 150 } }, 18)
     A:Buttons({
-        { "New profile...", function() StaticPopup_Show("ALLQUEST_NEW_PROFILE") end, 120 },
-        { "Export settings...", function() StaticPopup_Show("ALLQUEST_EXPORT") end, 140 },
-        { "Import settings...", function() StaticPopup_Show("ALLQUEST_IMPORT") end, 140 },
+        { "Export settings...", function() StaticPopup_Show("ALLQUEST_EXPORT") end, 170 },
+        { "Import settings...", function() StaticPopup_Show("ALLQUEST_IMPORT") end, 170 },
     }, 18)
     A:Dynamic(function()
         local m = AQ.DB.meta
@@ -518,7 +554,7 @@ local function BuildScrolling(host, left, top, right, bottom)
     scroll:SetPoint("TOPLEFT", left, top)
     scroll:SetPoint("BOTTOMRIGHT", right, bottom)
     local child = CreateFrame("Frame", nil, scroll)
-    child:SetWidth(340)
+    child:SetWidth(WIDTH)
     child:SetHeight(400)
     scroll:SetScrollChild(child)
     local B = NewBuilder(child, -6)
@@ -528,7 +564,7 @@ end
 
 local function CreateStandalone()
     standalone = CreateFrame("Frame", "AllQuestOptions", UIParent, "BasicFrameTemplateWithInset")
-    standalone:SetSize(380, 560)
+    standalone:SetSize(WIDTH + 50, 600)
     standalone:SetPoint("CENTER")
     standalone:SetMovable(true)
     standalone:EnableMouse(true)

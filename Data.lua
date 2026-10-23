@@ -191,6 +191,10 @@ local function ChainHidden()
     return chainHidden
 end
 
+function Data.IsChainHidden(id)
+    return ChainHidden()[id] == true
+end
+
 -- Quests the player has been offered in game that the bundled database lacks (or lacks that giver for):
 -- AQ.shared.learned[questId] = { n = title, l = level, k = "n"|"o", id = giver id, name = giver name, m = uiMapId, x, y }
 local function LearnedRec(id, l)

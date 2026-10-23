@@ -296,21 +296,75 @@ end
 ---------------------------------------------------------------------------------------------
 -- Clicking markers: waypoint, hide, filter menu
 
-function AQ.SetWaypoint(entry)
+-- Waypoints. TomTom (also the copy that ships inside Quest Pilot) owns the arrow; the game has its own destination
+-- marker. Another addon may be steering one of them, so by default ("smart") a click only moves the arrow when
+-- nothing else is using it, and otherwise just marks the spot. Shift-click always points the arrow.
+local function ArrowInUse()
+    if _G.TomTom and TomTom.IsCrazyArrowEmpty then
+        local ok, empty = pcall(TomTom.IsCrazyArrowEmpty, TomTom)
+        if ok then return not empty end
+    end
+    return false
+end
+
+-- The game's own destination marker is taken (by Quest Pilot, or by the player) and is not ours.
+local function NativeMarkerInUse()
+    local qp = _G.QuestPilot
+    if qp and qp.Navigation and qp.Navigation.worldMarkerOwned then return true end
+    if C_SuperTrack and C_SuperTrack.IsSuperTrackingUserWaypoint and not AQ.nativeMine then
+        local ok, value = pcall(C_SuperTrack.IsSuperTrackingUserWaypoint)
+        return ok and value == true
+    end
+    return false
+end
+
+local function ForgetOurWaypoint()
+    if AQ.waypointUID and _G.TomTom and TomTom.RemoveWaypoint then
+        pcall(TomTom.RemoveWaypoint, TomTom, AQ.waypointUID)
+    end
+    AQ.waypointUID = nil
+end
+
+local function HintOnce(text)
+    if AQ.hinted then return end
+    AQ.hinted = true
+    AQ.Print(text)
+end
+
+-- how: nil = follow the setting, "arrow" = point the arrow here, "marker" = mark the map only.
+function AQ.SetWaypoint(entry, how)
+    local L = AQ.L
     local name = AQ.Data.StarterInfo(entry)
     local map, x, y = entry.map, entry.x, entry.y
     if not (map and x and y) then return end
+    local mode = AQ.db.waypointMode or "smart"
+    if how == "arrow" then mode = "arrow" elseif how == "marker" then mode = "marker" end
+
     if _G.TomTom and TomTom.AddWaypoint then
-        TomTom:AddWaypoint(map, x, y, { title = name, persistent = false, minimap = true, world = true })
-        AQ.Print("waypoint set: " .. name)
+        ForgetOurWaypoint()                               -- one waypoint of ours at a time
+        local arrow = mode == "arrow" or (mode == "smart" and not ArrowInUse())
+        local uid = TomTom:AddWaypoint(map, x, y, { title = name, from = "AllQuest", source = "AllQuest", persistent = false,
+            minimap = true, world = true, crazy = arrow, silent = true, cleardistance = 10 })
+        AQ.waypointUID = uid
+        if arrow then
+            AQ.Print(L["waypoint set"] .. ": " .. name)
+        else
+            AQ.Print(L["marked on the map"] .. ": " .. name)
+            HintOnce(L["Your current arrow was kept. Shift-click a marker to point the arrow at it."])
+        end
     elseif C_Map.SetUserWaypoint and UiMapPoint and C_Map.CanSetUserWaypointOnMap and C_Map.CanSetUserWaypointOnMap(map) then
+        if mode == "smart" and NativeMarkerInUse() then
+            AQ.Print(L["Another addon is steering the destination marker. Shift-click to take it over."])
+            return
+        end
         C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(map, x, y))
-        if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
+        AQ.nativeMine = true
+        if mode ~= "marker" and C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
             pcall(C_SuperTrack.SetSuperTrackedUserWaypoint, true)
         end
-        AQ.Print("waypoint set: " .. name)
+        AQ.Print(L["waypoint set"] .. ": " .. name)
     else
-        AQ.Print("this client cannot place a waypoint there.")
+        AQ.Print(L["this client cannot place a waypoint there."])
     end
 end
 
@@ -325,6 +379,8 @@ function AQ.OpenPinMenu(owner, info)
     MenuUtil.CreateContextMenu(owner, function(_, root)
         root:CreateTitle(name)
         root:CreateButton(AQ.L["Set waypoint"], function() AQ.SetWaypoint(entry) end)
+        root:CreateButton(AQ.L["Point the arrow here"], function() AQ.SetWaypoint(entry, "arrow") end)
+        root:CreateButton(AQ.L["Mark on the map only"], function() AQ.SetWaypoint(entry, "marker") end)
         root:CreateDivider()
         for i, q in ipairs(info.quests) do
             if i > 8 then break end
@@ -453,7 +509,7 @@ function AQ.ShowQuestTooltip(owner, info, anchor, position, total)
         GameTooltip:AddLine((L["Giver %d of %d at this spot"]):format(position, total), 0.5, 0.8, 1)
     end
     if detailed then
-        GameTooltip:AddLine(L["Click: waypoint  -  Right-click: hide"], 0.45, 0.45, 0.45)
+        GameTooltip:AddLine(L["Click: waypoint  -  Shift-click: arrow  -  Right-click: more"], 0.45, 0.45, 0.45)
     end
     GameTooltip:Show()
 end
@@ -526,7 +582,7 @@ function AQ.MarkerClicks(frame)
         if f.downX and (math.abs(x - f.downX) > 6 or math.abs(y - f.downY) > 6) then return end
         if not f.info then return end
         if button == "LeftButton" then
-            AQ.SetWaypoint(f.info.entry)
+            AQ.SetWaypoint(f.info.entry, IsShiftKeyDown() and "arrow" or nil)
         elseif button == "RightButton" then
             AQ.OpenPinMenu(f, f.info)
         end

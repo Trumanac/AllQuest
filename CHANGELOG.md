@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.1
+- Waypoints work alongside Quest Pilot and TomTom: a click moves the arrow only when nothing else is using it
+  (Shift-click always does); only one AllQuest waypoint exists at a time and it clears itself on arrival.
+  The behaviour can be changed under Waypoints (smart / always move the arrow / mark the map only).
+- Public API (`AllQuestAPI`) for other addons: available quests per map, nearest quests, hidden check, refresh callback.
+- Settings window is wider, long labels wrap, and the profile / export / import buttons sit on their own lines.
+- Quest data refreshed.
+
 ## 0.11.0
 - Quest list window (`/aq list`, a button on the world map, middle-click on the minimap button): search, sort by
   level / name / distance / zone, filter by zone range and quest type, click a row for a waypoint.

@@ -17,3 +17,7 @@ Run `/aqdump` in game with the export addon enabled, `/reload`, then
 
 ## License
 GPL-3.0 (see `LICENSE`, and `NOTICE.md` for the data's origin).
+
+## API for other addons
+`AllQuestAPI` (see the comment at the top of `API.lua`): `IsReady()`, `GetQuests(uiMapId)`, `GetNearest(limit, maxYards)`,
+`IsHidden(questId)` and the callback `AllQuest_Refreshed` (`AllQuestAPI:RegisterCallback("AllQuest_Refreshed", fn)`).

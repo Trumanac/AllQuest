@@ -16,7 +16,8 @@ It doesn't track your active quests or tell you how to complete them. It answers
 - **Rich hover panel**: giver, every quest's level and name, type, requirements, what drops a quest-starting item, and the quest before and after it in a chain
 - **Quest list** with search, sorting (level, name, distance, zone) and type filters; click a row for a waypoint
 - **New-quest notice**: a chat message when a level-up or a turned-in quest opens up new quests (can be switched off)
-- **Click a marker** to set a waypoint; **right-click** to hide a quest, a quest chain, a giver or a whole zone; bring them back from the options
+- **Click a marker** to set a waypoint (**Shift-click** points the arrow at it); **right-click** to hide a quest, a quest chain, a giver or a whole zone; bring them back from the options
+- **Plays nicely with Quest Pilot and TomTom:** by default a click only moves the arrow when nothing else is using it, so it never hijacks your guided route. Choose "always move the arrow" or "mark the map only" in the options
 - **Quick presets** (Minimal, Detailed, Show All) - or save your own
 
 ## Quests the usual map misses

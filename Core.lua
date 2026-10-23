@@ -32,6 +32,7 @@ AQ.defaults = {
     markerAlpha = 1.0,       -- marker opacity
     labelSize = 10,          -- size of the text under and on markers
     tooltipScale = 1.0,      -- size of the quest panel
+    waypointMode = "smart",  -- clicking a marker: smart (keep an arrow another addon is using), arrow, marker (map only)
 }
 
 -- Kept once for the whole account (not per profile).
@@ -366,7 +367,7 @@ end
 
 local RANGES = { iconScale = { 0.5, 2 }, minimapScale = { 0.5, 2.5 }, levelsAbove = { 0, 60 }, markerAlpha = { 0.3, 1 },
     labelSize = { 8, 16 }, tooltipScale = { 0.7, 1.6 } }
-local MARKER_STYLES = { exclaim = true, diamond = true, round = true }
+local CHOICES = { markerStyle = { exclaim = true, diamond = true, round = true }, waypointMode = { smart = true, arrow = true, marker = true } }
 local EXPORT_PREFIX = "AQ1"
 
 function AQ.ExportString()
@@ -407,8 +408,8 @@ function AQ.ImportString(text)
         elseif type(default) == "boolean" then
             values[key] = value == "1"
             count = count + 1
-        elseif key == "markerStyle" then
-            if MARKER_STYLES[value] then values[key] = value count = count + 1 end
+        elseif CHOICES[key] then
+            if CHOICES[key][value] then values[key] = value count = count + 1 end
         elseif type(default) == "number" and tonumber(value) then
             local n = tonumber(value)
             local range = RANGES[key]
@@ -449,6 +450,7 @@ function AQ.RefreshAll()
     if AQ.Pins then AQ.Pins.Refresh() end
     if AQ.Minimap then AQ.Minimap.Rebuild() end
     if AQ.QuestList then AQ.QuestList.Refresh() end
+    if AQ.API and AQ.API.callbacks then AQ.API.callbacks:Fire("AllQuest_Refreshed") end
 end
 
 -- Called after any setting changed.
