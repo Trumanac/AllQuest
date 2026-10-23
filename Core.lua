@@ -473,7 +473,7 @@ function AQ.RequestRefresh()
         AQ.RefreshAll()
         if AQ.Notify then
             -- a level-up or a turned-in quest may have opened new quests: tell the player, otherwise just note the state
-            if AQ.notifyNext then AQ.notifyNext = false AQ.Notify.Check() else AQ.Notify.Baseline() end
+            if AQ.notifyNext then AQ.notifyNext = false AQ.Notify.Schedule() else AQ.Notify.Baseline() end
         end
     end)
 end

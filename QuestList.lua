@@ -263,5 +263,10 @@ end
 
 function List.Toggle()
     if not frame then Create() end
-    if frame:IsShown() then frame:Hide() else frame:Show() end
+    if frame:IsShown() then
+        frame:Hide()
+    else
+        AQ.RaiseOverMap(frame, "HIGH")
+        frame:Show()
+    end
 end

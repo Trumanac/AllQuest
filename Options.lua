@@ -14,6 +14,12 @@ local WIDTH = 470          -- width of the settings content (the standalone wind
 ---------------------------------------------------------------------------------------------
 -- Row builders (a builder keeps the parent frame and the running vertical position)
 
+-- Windows opened from the world map button must sit above the map, whatever strata the map uses.
+function AQ.RaiseOverMap(frame, normal)
+    local mapShown = WorldMapFrame and WorldMapFrame.IsShown and WorldMapFrame:IsShown()
+    frame:SetFrameStrata(mapShown and "FULLSCREEN_DIALOG" or normal)
+end
+
 -- A dropdown frame (also used by the quest list). text() is the closed box's text, setup(root) fills the menu;
 -- clients without the modern dropdown get a button that calls step() instead. dd.Update() refreshes the text.
 function AQ.NewDropdown(parent, width, text, setup, step)
@@ -634,6 +640,7 @@ function AQ.ToggleOptions()
         standalone:Hide()
     else
         AQ.RefreshOptions()
+        AQ.RaiseOverMap(standalone, "DIALOG")
         standalone:Show()
     end
 end

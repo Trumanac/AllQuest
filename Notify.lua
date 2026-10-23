@@ -27,7 +27,19 @@ local function Available()
 end
 
 function Notify.Baseline()
+    if Notify.waiting then return end          -- a check is on its way: it must compare with the old state
     if AQ.Data.ready then base = (Available()) end
+end
+
+-- The game flags a quest as completed (and the level as new) a moment after the event, so the check waits a little.
+function Notify.Schedule()
+    if Notify.waiting then return end
+    Notify.waiting = true
+    C_Timer.After(1.5, function()
+        Notify.waiting = false
+        AQ.RefreshAll()                        -- fresh numbers first
+        Notify.Check()
+    end)
 end
 
 local MAX_LISTED = 4

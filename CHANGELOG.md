@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.2
+- Fix: the new-quest notice now waits a moment after a level-up or turn-in, so quests the game had not yet flagged as
+  completed no longer hide the quests they unlock.
+- Fix: the options and quest list windows open above the world map.
+- CurseForge description refreshed.
+
 ## 0.11.1
 - Waypoints work alongside Quest Pilot and TomTom: a click moves the arrow only when nothing else is using it
   (Shift-click always does); only one AllQuest waypoint exists at a time and it clears itself on arrival.
