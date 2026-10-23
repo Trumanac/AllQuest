@@ -4,6 +4,7 @@
 ## Author: Super
 ## Version: 1.0.0
 ## License: GPL-3.0
+## X-Curse-Project-ID: 1760152
 ## X-Website: https://github.com/Trumanac/AllQuest
 ## SavedVariables: AllQuestDB
 ## IconTexture: Interface\AddOns\AllQuest\images\AllQuest256
