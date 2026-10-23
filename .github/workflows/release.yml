@@ -1,0 +1,78 @@
+# Builds AllQuest with the BigWigs packager and uploads it.
+#
+# Pushing a tag (e.g. v1.0.1) uploads to CurseForge (## X-Curse-Project-ID + secret CF_API_KEY) and GitHub
+# Releases. Tags containing "alpha" or "beta" (e.g. v1.0.1-beta1) are uploaded as alpha / beta files.
+#
+# Actions tab -> "Package and release" -> "Run workflow" picks the targets by hand:
+#   tag      an existing tag to build (e.g. v1.0.0); empty = the newest commit on the chosen branch
+#   targets  none (test build: the zip is attached to the run) or curseforge
+#   github   also create / update the GitHub release for that tag
+name: Package and release
+
+on:
+  push:
+    tags:
+      - "**"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (e.g. v1.0.0). Empty = newest commit (use with 'none' for a test build)"
+        required: false
+        default: ""
+      targets:
+        description: "Where to upload"
+        type: choice
+        options:
+          - none
+          - curseforge
+        default: none
+      github:
+        description: "Also create/update the GitHub release"
+        type: boolean
+        default: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag != '' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+
+      # Packager switches: -d uploads nothing. WoWInterface and Wago are not used (no ids, no tokens).
+      - name: Choose upload targets
+        id: opts
+        env:
+          EVENT: ${{ github.event_name }}
+          TARGETS: ${{ inputs.targets }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          args=""
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ "$TARGETS" = "none" ]; then
+              args="-d"
+            elif [ -z "$TAG" ]; then
+              echo "::error::Uploading needs a tag (e.g. v1.0.0). Leave targets on 'none' for a test build."
+              exit 1
+            fi
+          fi
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+          echo "Packager arguments: ${args:-(none: upload)}"
+
+      - uses: BigWigsMods/packager@v2
+        with:
+          args: ${{ steps.opts.outputs.args }}
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          # GitHub releases: always for a pushed tag, otherwise only when "github" is ticked
+          GITHUB_OAUTH: ${{ (github.event_name == 'push' || inputs.github) && secrets.GITHUB_TOKEN || '' }}
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: AllQuest-build
+          path: .release/*.zip
+          include-hidden-files: true # .release/ starts with a dot
