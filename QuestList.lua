@@ -204,6 +204,7 @@ local function Create()
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
     frame:SetClampedToScreen(true)
     frame:SetFrameStrata("HIGH")
+    frame:SetToplevel(true)                 -- clicking it brings it in front of other windows (the settings)
     frame:Hide()
     tinsert(UISpecialFrames, "AllQuestList")
 
@@ -274,5 +275,6 @@ function List.Toggle()
     else
         AQ.RaiseOverMap(frame, "HIGH")
         frame:Show()
+        frame:Raise()
     end
 end

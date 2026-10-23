@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0 - first release
+- Fix: the quest list and settings windows no longer blend when dragged over each other; clicking one brings it to the front.
+- Everything from 0.x: markers on the world map and minimap, quest list, presets and profiles, hide lists, quest-type
+  filter, waypoints that coexist with other arrow addons, display options, three languages, OpenMap support.
+
 ## 0.11.2
 - Fix: the new-quest notice now waits a moment after a level-up or turn-in, so quests the game had not yet flagged as
   completed no longer hide the quests they unlock.

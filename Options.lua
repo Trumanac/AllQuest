@@ -579,6 +579,7 @@ local function CreateStandalone()
     standalone:SetScript("OnDragStop", standalone.StopMovingOrSizing)
     standalone:SetClampedToScreen(true)
     standalone:SetFrameStrata("DIALOG")
+    standalone:SetToplevel(true)            -- clicking it brings it in front of other windows (the quest list)
     standalone:Hide()
     tinsert(UISpecialFrames, "AllQuestOptions")
 
@@ -642,6 +643,7 @@ function AQ.ToggleOptions()
         AQ.RefreshOptions()
         AQ.RaiseOverMap(standalone, "DIALOG")
         standalone:Show()
+        standalone:Raise()
     end
 end
 
