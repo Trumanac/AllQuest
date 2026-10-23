@@ -20,20 +20,138 @@ function AQ.RaiseOverMap(frame, normal)
     frame:SetFrameStrata(mapShown and "FULLSCREEN_DIALOG" or normal)
 end
 
--- A dropdown frame (also used by the quest list). text() is the closed box's text, setup(root) fills the menu;
--- clients without the modern dropdown get a button that calls step() instead. dd.Update() refreshes the text.
-function AQ.NewDropdown(parent, width, text, setup, step)
-    local ok, dd = pcall(CreateFrame, "DropdownButton", nil, parent, "WowStyle1DropdownTemplate")
-    if ok and dd and dd.SetupMenu then
-        dd:SetupMenu(function(_, root) setup(root) end)
-    else
-        dd = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-        dd:SetHeight(24)
-        dd.OverrideText = dd.SetText
-        dd:SetScript("OnClick", step)
+---------------------------------------------------------------------------------------------
+-- A small pop-up menu used by every AllQuest dropdown. The game's own dropdown menus hide behind our windows (which are
+-- raised above the world map), so AllQuest brings its own, always on top.
+-- entries: { text, checked = bool | function, onClick, keepOpen } | { text, title = true } | { divider = true }
+
+local menu, catcher
+local menuLines = {}
+
+function AQ.CloseMenu()
+    if menu then menu:Hide() end
+    if catcher then catcher:Hide() end
+end
+
+local function MeasureText(text)
+    menu.measure = menu.measure or menu:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    menu.measure:SetText(text)
+    return menu.measure:GetStringWidth() or 60
+end
+
+local function BuildMenu(entries)
+    local width = 90
+    for _, e in ipairs(entries) do
+        if e.text then width = math.max(width, MeasureText(e.text) + 44) end
     end
-    dd:SetWidth(width)
-    dd.Update = function() dd:OverrideText(text()) end
+    local y = -6
+    for i, e in ipairs(entries) do
+        local line = menuLines[i]
+        if not line then
+            line = CreateFrame("Button", nil, menu)
+            line:SetHeight(20)
+            line:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+            line.check = line:CreateTexture(nil, "ARTWORK")
+            line.check:SetSize(14, 14)
+            line.check:SetPoint("LEFT", 6, 0)
+            line.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+            line.text = line:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            line.text:SetPoint("LEFT", 24, 0)
+            line.text:SetJustifyH("LEFT")
+            line.rule = line:CreateTexture(nil, "ARTWORK")
+            line.rule:SetPoint("LEFT", 4, 0)
+            line.rule:SetPoint("RIGHT", -4, 0)
+            line.rule:SetHeight(1)
+            line.rule:SetColorTexture(0.45, 0.45, 0.45, 0.8)
+            menuLines[i] = line
+        end
+        local height = e.divider and 8 or 20
+        line:SetHeight(height)
+        line:ClearAllPoints()
+        line:SetPoint("TOPLEFT", 4, y)
+        line:SetPoint("TOPRIGHT", -4, y)
+        line.rule:SetShown(e.divider and true or false)
+        line.text:SetText(e.text or "")
+        if e.title then line.text:SetTextColor(1, 0.82, 0) else line.text:SetTextColor(1, 1, 1) end
+        local on = e.checked
+        if type(on) == "function" then on = on() end
+        line.check:SetShown(on and true or false)
+        local clickable = e.onClick ~= nil and not e.title and not e.divider
+        line:SetEnabled(clickable)
+        line:EnableMouse(clickable)
+        line:SetScript("OnClick", function()
+            if e.onClick then e.onClick() end
+            if e.keepOpen then BuildMenu(entries) else AQ.CloseMenu() end
+        end)
+        line:Show()
+        y = y - height
+    end
+    for i = #entries + 1, #menuLines do menuLines[i]:Hide() end
+    menu:SetSize(width, -y + 6)
+end
+
+function AQ.OpenMenu(anchor, entries)
+    if not menu then
+        catcher = CreateFrame("Button", nil, UIParent)
+        catcher:SetAllPoints(UIParent)
+        catcher:SetFrameStrata("TOOLTIP")
+        catcher:RegisterForClicks("AnyUp")
+        catcher:SetScript("OnClick", AQ.CloseMenu)
+        catcher:Hide()
+        menu = CreateFrame("Frame", nil, UIParent)
+        menu:SetFrameStrata("TOOLTIP")
+        menu:SetFrameLevel(10)
+        menu:SetClampedToScreen(true)
+        menu:EnableMouse(true)
+        local border = menu:CreateTexture(nil, "BACKGROUND", nil, -1)
+        border:SetPoint("TOPLEFT", -1, 1)
+        border:SetPoint("BOTTOMRIGHT", 1, -1)
+        border:SetColorTexture(0.45, 0.45, 0.45, 1)
+        local bg = menu:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints()
+        bg:SetColorTexture(0.06, 0.06, 0.08, 0.98)
+        menu:Hide()
+    end
+    if menu:IsShown() and menu.owner == anchor then AQ.CloseMenu() return end
+    menu.owner = anchor
+    BuildMenu(entries)
+    menu:ClearAllPoints()
+    menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
+    catcher:Show()
+    menu:Show()
+end
+
+
+-- A dropdown (also used by the quest list). text() is the closed box's text and setup(root) fills the menu with the
+-- same calls the game's menus take (CreateRadio, CreateCheckbox, CreateButton, CreateTitle, CreateDivider); step is unused.
+-- The menu is AllQuest's own (see above) because the game's dropdown menu opens behind our windows. dd.Update() refreshes the text.
+function AQ.NewDropdown(parent, width, text, setup)
+    local dd = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    dd:SetSize(width, 24)
+    local arrow = dd:CreateTexture(nil, "OVERLAY")
+    arrow:SetSize(10, 10)
+    arrow:SetPoint("RIGHT", -8, -1)
+    arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Down")
+    dd.Update = function() dd:SetText(text()) end
+    local function Entries()
+        local entries = {}
+        local function Add(label, selected, onClick)
+            entries[#entries + 1] = { text = label, checked = selected, onClick = function()
+                if onClick then onClick() end
+                dd.Update()
+            end }
+        end
+        local root = {
+            CreateRadio = function(_, label, selected, onClick) Add(label, selected, onClick) end,
+            CreateCheckbox = function(_, label, selected, onClick) Add(label, selected, onClick) end,
+            CreateButton = function(_, label, onClick) Add(label, nil, onClick) end,
+            CreateTitle = function(_, label) entries[#entries + 1] = { text = label, title = true } end,
+            CreateDivider = function() entries[#entries + 1] = { divider = true } end,
+        }
+        setup(root)
+        return entries
+    end
+    dd:SetScript("OnClick", function(self) AQ.OpenMenu(self, Entries()) end)
     dd.Update()
     return dd
 end

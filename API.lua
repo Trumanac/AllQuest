@@ -7,9 +7,11 @@ local AddOn, AQ = ...
 --   AllQuestAPI.IsReady()                     true once the quest database is loaded
 --   AllQuestAPI.GetQuests(uiMapId)            list of quests available on a map (see Describe for the fields)
 --   AllQuestAPI.GetNearest([limit], [maxYards])  the closest available quests to the player, nearest first
+--   AllQuestAPI.GetRewards(questId)           xp, money (copper), { itemId ... }, { choiceItemId ... }; nil when unknown
 --   AllQuestAPI.IsHidden(questId)             true when the player hid the quest or its chain
 --   AllQuestAPI:RegisterCallback("AllQuest_Refreshed", fn)   called after the markers were redrawn
-local API = { version = 1 }
+-- version 2: quests carry their rewards, and GetRewards exists
+local API = { version = 2 }
 AQ.API = API
 _G.AllQuestAPI = API
 
@@ -17,19 +19,27 @@ local callbackHandler = LibStub and LibStub("CallbackHandler-1.0", true)
 if callbackHandler then API.callbacks = callbackHandler:New(API) end
 
 -- { questId, name, level, trivial, locked, repeatable, groupSize, giverKind ("n" npc, "o" object, "i" item, "d" dungeon),
---   giverId, giverName, mapId, x, y (0-1 on that map), distance (yards, when known) }
+--   giverId, giverName, mapId, x, y (0-1 on that map), distance (yards, when known),
+--   xp, money (copper), rewardItems, choiceItems (item id lists) - the four reward fields are nil when unknown }
 local function Describe(pin, q)
     local entry = pin.entry
+    local xp, money, items, choices = AQ.Data.Rewards(q.id)
     return {
         questId = q.id, name = AQ.Data.QuestName(q.id), level = q.level, trivial = q.trivial and true or false,
         locked = q.locked and true or false, repeatable = q.rep and true or false, groupSize = q.grp,
         giverKind = entry.kind, giverId = entry.id, giverName = (AQ.Data.StarterInfo(entry)),
         mapId = entry.map, x = entry.x, y = entry.y,
+        xp = xp, money = money, rewardItems = items, choiceItems = choices,
     }
 end
 
 function API.IsReady()
     return AQ.Data and AQ.Data.ready and true or false
+end
+
+function API.GetRewards(questId)
+    if not API.IsReady() or not questId then return end
+    return AQ.Data.Rewards(questId)
 end
 
 function API.GetQuests(uiMapId)

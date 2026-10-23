@@ -40,9 +40,11 @@ AQ.defaults = {
 --   presets      presets saved by the player: name -> copy of the preset keys
 --   ignored      quests and givers the player hid: { quests = { [id] = name }, givers = { ["n123"] = name } }
 --   groupSizes   suggested group size per quest, learned from the quest log
+--   rewards      rewards seen on quest dialogs: questId -> { xp, money, { itemId ... }, { choiceItemId ... } }
+--   list         the quest list's own choices: { cols = { [column] = true/false }, sort, desc }
 --   profiles     settings profiles: name -> settings;  assign: "Name-Realm" -> profile name
 AQ.sharedDefaults = { learned = {}, presets = {}, ignored = {}, groupSizes = {}, profiles = {}, assign = {},
-    advancedOpen = false }
+    rewards = {}, list = {}, advancedOpen = false }
 
 -- Presets. They set the "how much do I see" settings below; everything else (colours, minimap button,
 -- tracker ...) is a personal choice a preset leaves alone. The Detailed preset is also the first-load default.

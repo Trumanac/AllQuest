@@ -55,11 +55,53 @@ local function ScanDetail()
     Remember("questnpc", id, GetTitleText and GetTitleText() or nil, level)
 end
 
+-- Rewards: the quest dialog shows experience, money and items, so remember them for the quest list's columns.
+-- The item links can be missing for a moment while the game loads the items, so try again once.
+local function ItemIds(kind, count)
+    local ids = {}
+    for i = 1, count do
+        local link = GetQuestItemLink and GetQuestItemLink(kind, i)
+        local id = link and tonumber(link:match("item:(%d+)"))
+        if not id then return nil end
+        ids[#ids + 1] = id
+    end
+    return ids
+end
+
+local function ScanRewards(questId, retry)
+    if not (questId and questId > 0 and GetRewardXP) then return end
+    local items = ItemIds("reward", GetNumQuestRewards and GetNumQuestRewards() or 0)
+    local choices = ItemIds("choice", GetNumQuestChoices and GetNumQuestChoices() or 0)
+    if not (items and choices) then
+        if not retry then C_Timer.After(1, function() pcall(ScanRewards, questId, true) end) end
+        return
+    end
+    local record = { GetRewardXP() or 0, GetRewardMoney and GetRewardMoney() or 0, #items > 0 and items or nil, #choices > 0 and choices or nil }
+    local old = AQ.shared.rewards[questId]
+    if old and old[1] == record[1] and old[2] == record[2] and #(old[3] or {}) == #items and #(old[4] or {}) == #choices then return end
+    AQ.shared.rewards[questId] = record
+    if AQ.QuestList and AQ.QuestList.Refresh then AQ.QuestList.Refresh() end
+end
+
+local function ScanQuestDialog()
+    ScanRewards(GetQuestID and GetQuestID())
+end
+
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("GOSSIP_SHOW")
 frame:RegisterEvent("QUEST_DETAIL")
+frame:RegisterEvent("QUEST_COMPLETE")
 frame:SetScript("OnEvent", function(_, event)
-    local ok, err = pcall(event == "GOSSIP_SHOW" and ScanGossip or ScanDetail)
+    local ok, err = pcall(function()
+        if event == "GOSSIP_SHOW" then
+            ScanGossip()
+        elseif event == "QUEST_DETAIL" then
+            ScanDetail()
+            ScanQuestDialog()
+        else
+            ScanQuestDialog()
+        end
+    end)
     if not ok then geterrorhandler()(err) end
 end)
 

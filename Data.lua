@@ -6,7 +6,8 @@ local AddOn, AQ = ...
 -- AQ.DB layout:
 --   quests[id] = { name, level, requiredLevel, maxLevel, raceMask, classMask, specialFlags,
 --                  preQuestSingle, preQuestGroup, exclusiveTo, parentQuest,
---                  requiredSkill {id, value}, requiredMinRep {faction, value}, requiredMaxRep {faction, value} }
+--                  requiredSkill {id, value}, requiredMinRep {faction, value}, requiredMaxRep {faction, value},
+--                  event name, quest tag id, suggested group size, rewards {xp, money, {itemIds}, {choiceItemIds}} }
 --   npcs[id]   = { name, subName, friendlyTo ("A" | "H" | "AH") }       objs[id] = name
 --   items[id]  = { itemName, "Dropped by ..." }       dungeons[areaId] = dungeonName
 --   maps[uiMapId] = { { x, y (0-100), kind, giverId, { questId, ... } }, ... }
@@ -100,6 +101,16 @@ function Data.ItemDrops(itemId)
     local lines = it[2]
     if type(lines) == "string" then lines = { lines } end
     return lines, it[3]
+end
+
+-- What a quest rewards: experience, money (copper), reward items and choice items (item ids); nil when unknown.
+-- Comes from the bundled data (quest record field 18) or from the dialog the player saw in game; both have the
+-- shape { xp, money, { itemId ... }, { choiceItemId ... } }.
+function Data.Rewards(id)
+    local d = DB.quests[id]
+    local r = (d and d[18]) or AQ.shared.rewards[id]
+    if not r then return end
+    return r[1], r[2], r[3] or {}, r[4] or {}
 end
 
 -- Which quests each quest unlocks (the reverse of the prerequisite lists), built on first use.

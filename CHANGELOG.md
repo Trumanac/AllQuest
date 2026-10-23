@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.1-beta
+- Quest list is now a sortable table: Level, Quest, Giver, Zone, Distance, XP, Money and Rewards columns. Click a header
+  to sort (click again to flip the direction); the Columns button switches columns on and off. Choices are remembered.
+- Quest list: the sort menu lists every column, has an ascending / descending button, and unknown values sort last.
+- Fix: drop-downs in the settings (presets, marker style, waypoints, restore, profiles) and the quest list showed nothing when
+  clicked, because the game's menu opened behind the window. They now use AllQuest's own menu, which always opens on top.
+- Quest list: a quest is listed once per giver (at the spot nearest you) instead of once per spawn or drop spot.
+- Quest list: a gear button in the title bar opens the settings; the level column header is shortened to "Lvl".
+- Public API (version 2): quests carry xp, money and reward item ids, and `AllQuestAPI.GetRewards(questId)` returns them.
+- Hovering a reward icon in the quest list shows the game's own item tooltip (weapon, potion ...) instead of the quest panel.
+- XP, money and reward items are learned from the quest windows you open in game (and shown in the row tooltip).
+  The data export tool can also bundle them.
+
 ## 1.0.0 - first release
 - Fix: the quest list and settings windows no longer blend when dragged over each other; clicking one brings it to the front.
 - Everything from 0.x: markers on the world map and minimap, quest list, presets and profiles, hide lists, quest-type
