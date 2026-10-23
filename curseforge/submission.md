@@ -10,7 +10,7 @@ Fill these in on the "Create project" page (https://www.curseforge.com/project/c
 | License | GNU General Public License v3.0 |
 | Logo | `curseforge/logo.png` (400x400) |
 | Description | paste `curseforge/description.md` (the editor takes markdown / HTML; check the headings render) |
-| Source / Issues links | the GitHub repository (fill in once it exists) |
+| Source / Issues links | https://github.com/Trumanac/AllQuest (issues: https://github.com/Trumanac/AllQuest/issues) |
 | Screenshots | 8-10 cropped pictures from `devtools/shots` - put the map with the quest panel first |
 
 ## First file
