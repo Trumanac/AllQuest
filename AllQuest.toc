@@ -5,6 +5,7 @@
 ## Version: 1.0.1-beta
 ## License: GPL-3.0
 ## X-Curse-Project-ID: 1760152
+## X-Wago-ID: x61xMxN1
 ## X-Website: https://github.com/Trumanac/AllQuest
 ## SavedVariables: AllQuestDB
 ## IconTexture: Interface\AddOns\AllQuest\images\AllQuest256

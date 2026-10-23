@@ -1,7 +1,7 @@
 # Builds AllQuest with the BigWigs packager and uploads it.
 #
-# Pushing a tag (e.g. v1.0.1) uploads to CurseForge (## X-Curse-Project-ID + secret CF_API_KEY) and GitHub
-# Releases. Tags containing "alpha" or "beta" (e.g. v1.0.1-beta1) are uploaded as alpha / beta files.
+# Pushing a tag (e.g. v1.0.1) uploads to CurseForge (## X-Curse-Project-ID + secret CF_API_KEY), Wago (## X-Wago-ID +
+# secret WAGO_API_TOKEN) and GitHub Releases. Tags containing "alpha" or "beta" (e.g. v1.0.1-beta1) are uploaded as alpha / beta files.
 #
 # Actions tab -> "Package and release" -> "Run workflow" picks the targets by hand:
 #   tag      an existing tag to build (e.g. v1.0.0); empty = the newest commit on the chosen branch
@@ -42,7 +42,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.tag != '' && format('refs/tags/{0}', inputs.tag) || github.ref }}
 
-      # Packager switches: -d uploads nothing. WoWInterface and Wago are not used (no ids, no tokens).
+      # Packager switches: -d uploads nothing. WoWInterface is not used (no id, no token); Wago needs ## X-Wago-ID and the WAGO_API_TOKEN secret.
       - name: Choose upload targets
         id: opts
         env:
@@ -67,6 +67,7 @@ jobs:
           args: ${{ steps.opts.outputs.args }}
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
           # GitHub releases: always for a pushed tag, otherwise only when "github" is ticked
           GITHUB_OAUTH: ${{ (github.event_name == 'push' || inputs.github) && secrets.GITHUB_TOKEN || '' }}
 
