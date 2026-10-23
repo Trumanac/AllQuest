@@ -261,6 +261,12 @@ local function Create()
     frame:SetScript("OnShow", function() List.Refresh() end)
 end
 
+-- Put text in the search box (used by the screenshot tool).
+function List.SetSearch(text)
+    if not frame then Create() end
+    search:SetText(text or "")
+end
+
 function List.Toggle()
     if not frame then Create() end
     if frame:IsShown() then

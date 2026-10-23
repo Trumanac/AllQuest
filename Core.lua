@@ -508,6 +508,8 @@ frame:SetScript("OnEvent", function(_, event, arg1, arg2)
         AQ.Data.Init()
         AQ.Events.Start()
         AQ.CheckClientBuild()
+        -- the screenshot dev tool, when it is installed, needs a way in
+        if (C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded)("AllQuestShots") then _G.AllQuestInternals = AQ end
     elseif event == "PLAYER_ENTERING_WORLD" then
         -- completed-quest flags can still be arriving at login or /reload: look again shortly after
         if arg1 or arg2 then C_Timer.After(3, AQ.RequestRefresh) end
