@@ -16,7 +16,7 @@ local function Available()
     for _, map in ipairs(AQ.Data.MapIds()) do
         for _, pin in ipairs(AQ.PinsFor(map)) do
             for _, q in ipairs(pin.quests) do
-                if not set[q.id] then
+                if not set[q.id] and not q.locked then       -- a quest you cannot take yet is not "new" 
                     set[q.id] = true
                     info[q.id] = { level = q.level, map = map }
                 end
@@ -26,9 +26,18 @@ local function Available()
     return set, info
 end
 
+-- Noting the current state walks every map, so it waits for things to settle (settings clicks, reputation gains ...)
+-- and is skipped altogether while the notice is switched off.
+local baselinePending = false
 function Notify.Baseline()
     if Notify.waiting then return end          -- a check is on its way: it must compare with the old state
-    if AQ.Data.ready then base = (Available()) end
+    if not (AQ.db and AQ.db.notifyNewQuests) then base = nil return end
+    if baselinePending then return end
+    baselinePending = true
+    C_Timer.After(8, function()
+        baselinePending = false
+        if not Notify.waiting and AQ.Data.ready and AQ.db.notifyNewQuests then base = (Available()) end
+    end)
 end
 
 -- The game flags a quest as completed (and the level as new) a moment after the event, so the check waits a little.

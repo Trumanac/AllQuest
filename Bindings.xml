@@ -1,0 +1,11 @@
+<Bindings>
+    <Binding name="ALLQUEST_TOGGLE_LIST" header="ALLQUEST" category="ADDONS">
+        AllQuest_ToggleList()
+    </Binding>
+    <Binding name="ALLQUEST_TOGGLE_MARKERS" category="ADDONS">
+        AllQuest_ToggleMarkers()
+    </Binding>
+    <Binding name="ALLQUEST_OPEN_OPTIONS" category="ADDONS">
+        AllQuest_OpenOptions()
+    </Binding>
+</Bindings>

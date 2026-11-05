@@ -223,7 +223,7 @@ local function FactionName(id)
         local name = GetFactionInfoByID(id)
         if name then return name end
     end
-    return "faction " .. id
+    return (AQ.L["faction %d"]):format(id)
 end
 
 local function ClassNames(mask)
@@ -255,7 +255,7 @@ local function DetailLines(q)
     if q.maxl and q.maxl > 0 then add((AQ.L["Only up to level %d"]):format(q.maxl)) end
     if q.scaled then add(AQ.L["Level scales with yours"]) end
     if q.clsMask then add(AQ.L["Class"] .. ": " .. ClassNames(q.clsMask)) end
-    if q.sk then add((AQ.L["Skill: %s %d"]):format(SKILL_NAMES[q.sk[1]] and AQ.L[SKILL_NAMES[q.sk[1]]] or ("skill " .. q.sk[1]), q.sk[2] or 0)) end
+    if q.sk then add((AQ.L["Skill: %s %d"]):format(SKILL_NAMES[q.sk[1]] and AQ.L[SKILL_NAMES[q.sk[1]]] or ((AQ.L["skill %d"]):format(q.sk[1])), q.sk[2] or 0)) end
     if q.mr then add((AQ.L["Reputation: %s, %s or better"]):format(FactionName(q.mr[1]), AQ.L[StandingName(q.mr[2])])) end
     if q.xr then add((AQ.L["Reputation: %s, below %s"]):format(FactionName(q.xr[1]), AQ.L[StandingName(q.xr[2])])) end
     if AQ.db.showChainInfo then
@@ -311,7 +311,16 @@ end
 local function NativeMarkerInUse()
     local qp = _G.QuestPilot
     if qp and qp.Navigation and qp.Navigation.worldMarkerOwned then return true end
-    if C_SuperTrack and C_SuperTrack.IsSuperTrackingUserWaypoint and not AQ.nativeMine then
+    -- our own waypoint stays ours only while it is still the one set; anything else replaced it
+    if AQ.nativeMine then
+        local point = C_Map.GetUserWaypoint and C_Map.GetUserWaypoint()
+        local mine = AQ.nativeMine
+        local same = point and point.uiMapID == mine.map and point.position
+            and math.abs(point.position.x - mine.x) < 0.0005 and math.abs(point.position.y - mine.y) < 0.0005
+        if same then return false end
+        AQ.nativeMine = nil
+    end
+    if C_SuperTrack and C_SuperTrack.IsSuperTrackingUserWaypoint then
         local ok, value = pcall(C_SuperTrack.IsSuperTrackingUserWaypoint)
         return ok and value == true
     end
@@ -358,7 +367,7 @@ function AQ.SetWaypoint(entry, how)
             return
         end
         C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(map, x, y))
-        AQ.nativeMine = true
+        AQ.nativeMine = { map = map, x = x, y = y }
         if mode ~= "marker" and C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
             pcall(C_SuperTrack.SetSuperTrackedUserWaypoint, true)
         end
@@ -683,6 +692,7 @@ function Pin:OnAcquired(info)
 end
 
 function Pin:OnReleased()
+    if hover.owner == self then AQ.EndHover() end      -- the pin went away while hovered: stop cycling its tooltip
     self.info = nil
     if self.fade then self.fade:Stop() end
 end
@@ -789,16 +799,21 @@ end
 local guard = { active = false }
 local GUARD_FPS, GUARD_QUIET = 30, 0.35
 
-local function ViewSignature()
-    local parts = {}
+-- True when the zoom or the view moved since the last call (compares numbers, allocates nothing).
+local function ViewChanged()
     local canvas = WorldMapFrame.GetCanvas and WorldMapFrame:GetCanvas()
-    if canvas then parts[#parts + 1] = tostring(canvas:GetScale()) end
+    local scale = canvas and canvas:GetScale()
+    local a, b, c, d
     local API = _G.OpenMapAPI
     if API and API.GetView then
-        local ok, a, b, c, d = pcall(API.GetView)
-        if ok then parts[#parts + 1] = tostring(a) .. tostring(b) .. tostring(c) .. tostring(d) end
+        local ok, v1, v2, v3, v4 = pcall(API.GetView)
+        if ok then a, b, c, d = v1, v2, v3, v4 end
     end
-    return table.concat(parts, "|")
+    local view = guard.view
+    if not view then view = {} guard.view = view end
+    if view[1] == scale and view[2] == a and view[3] == b and view[4] == c and view[5] == d then return false end
+    view[1], view[2], view[3], view[4], view[5] = scale, a, b, c, d
+    return true
 end
 
 local function GuardEngage()
@@ -826,9 +841,7 @@ guardFrame:SetScript("OnUpdate", function()
     local API = _G.OpenMapAPI
     if not (API and API.IsStitched and API.IsStitched()) then return end
     local now = GetTime()
-    local sig = ViewSignature()
-    if sig ~= guard.sig then
-        guard.sig = sig
+    if ViewChanged() then
         guard.quietAt = now + GUARD_QUIET
         guard.started = guard.started or now
         if not guard.active and now - guard.started > 0.2 and GetFramerate() < GUARD_FPS then GuardEngage() end
@@ -1129,6 +1142,6 @@ loader:SetScript("OnEvent", function()
     -- Saved variables are ready by now.
     Install()
     if not Pins.installed then
-        AQ.Print("world map is not available; markers disabled.")
+        AQ.Print(AQ.L["world map is not available; markers disabled."])
     end
 end)

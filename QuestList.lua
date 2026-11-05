@@ -7,10 +7,11 @@ local List = {}
 AQ.QuestList = List
 
 local L = AQ.L
-local ROW_H, MAX_ROWS = 20, 250
+local ROW_H = 20
 local MIN_WIDTH, PAD = 560, 6
 
-local SCOPES = { { "zone", "This zone" }, { "continent", "This continent" }, { "all", "Everywhere" } }
+local SCOPES = { { "zone", "This zone" }, { "view", "Map I am viewing" }, { "continent", "This continent" }, { "all", "Everywhere" } }
+local PAGE = 250
 -- Type filter: key as TypesFor names it, text shown.
 local TYPE_FILTERS = { { "all", "All types" }, { "Group", "Group" }, { "Class", "Class" }, { "PvP", "PvP" }, { "Raid", "Raid" },
     { "Heroic", "Heroic" }, { "Legendary", "Legendary" }, { "Escort", "Escort" }, { "Profession", "Profession" },
@@ -31,8 +32,8 @@ local COLUMNS = {
 local REWARD_TIP = "Rewards come from the built-in data where it has them and from the quest windows you open in game. A dash means unknown."
 local COLUMN_TIPS = { xp = REWARD_TIP, money = REWARD_TIP, rewards = REWARD_TIP }
 
-local state = { scope = "zone", sort = "level", desc = false, filter = "all", text = "" }
-local frame, content, status, search, headerBar
+local state = { scope = "zone", sort = "level", desc = false, filter = "all", text = "", limit = PAGE }
+local frame, content, status, search, headerBar, more
 local rows, headers, buttons = {}, {}, {}
 local items = {}           -- the quests currently listed (before sorting)
 local layout = {}          -- visible columns with their x offset
@@ -73,6 +74,14 @@ local function Collect()
     local home = AQ.PlayerZone()
     if state.scope == "zone" then
         if home then zones[1] = home end
+    elseif state.scope == "view" then
+        -- the map open in the world map window (its nearest parent that has quest data), else the player's zone
+        local id = WorldMapFrame and WorldMapFrame.GetMapID and WorldMapFrame:GetMapID() or home
+        while id and id ~= 0 and not AQ.Data.HasMap(id) do
+            local info = C_Map.GetMapInfo(id)
+            id = info and info.parentMapID
+        end
+        if id and id ~= 0 then zones[1] = id elseif home then zones[1] = home end
     elseif state.scope == "continent" then
         local continent = home and AQ.ContinentOf(home)
         for _, id in ipairs(AQ.Data.MapIds()) do
@@ -171,8 +180,7 @@ local function Distance(yards)
 end
 
 local function Money(copper)
-    if not copper then return "|cff808080-|r" end
-    if copper <= 0 then return "|cff8080800|r" end
+    if not copper or copper <= 0 then return "|cff808080-|r" end
     local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
     local out = {}
     if g > 0 then out[#out + 1] = ("|cffffd100%dg|r"):format(g) end
@@ -267,7 +275,7 @@ local function CellText(key, item)
     elseif key == "giver" then return item.giver
     elseif key == "zone" then return item.zoneName
     elseif key == "distance" then return Distance(item.dist)
-    elseif key == "xp" then return item.xp and tostring(item.xp) or "|cff808080-|r"
+    elseif key == "xp" then return (item.xp and item.xp > 0) and tostring(item.xp) or "|cff808080-|r"
     elseif key == "money" then return Money(item.money)
     elseif key == "rewards" then return RewardText(item)
     end
@@ -426,6 +434,8 @@ local function Row(i)
         if not self.item then return end
         if button == "RightButton" then
             AQ.OpenPinMenu(self, { entry = self.item.entry, quests = { self.item.q }, top = self.item.q })
+        elseif IsControlKeyDown() then
+            List.ShowOnMap(self.item.entry)
         else
             AQ.SetWaypoint(self.item.entry, IsShiftKeyDown() and "arrow" or nil)
         end
@@ -452,7 +462,7 @@ end
 -- Sort what has been collected and draw it.
 local function Render()
     Sort(items)
-    local shown = math.min(#items, MAX_ROWS)
+    local shown = math.min(#items, state.limit)
     for i = 1, shown do
         local item = items[i]
         local row = Row(i)
@@ -480,6 +490,7 @@ local function Render()
         status:SetText((L["%d quests"]):format(#items))
     end
     UpdateHeaders()
+    if more then more:SetShown(#items > shown) end
     for _, b in ipairs(buttons) do b.Update() end
 end
 
@@ -491,6 +502,15 @@ function List.Refresh()
     end
     items = Collect()
     Render()
+end
+
+-- Open the world map on a quest giver's zone.
+function List.ShowOnMap(entry)
+    if not (entry and entry.map) then return end
+    if WorldMapFrame then
+        if not WorldMapFrame:IsShown() and ShowUIPanel then pcall(ShowUIPanel, WorldMapFrame) end
+        if WorldMapFrame.SetMapID then pcall(WorldMapFrame.SetMapID, WorldMapFrame, entry.map) end
+    end
 end
 
 function List.SortChanged()
@@ -513,12 +533,17 @@ local function MenuButton(x, width, text, entries)
     return b
 end
 
-local function Choices(list, key, after)
+local function Choices(list, key)
     return function()
         local entries = {}
         for _, item in ipairs(list) do
             entries[#entries + 1] = { text = L[item[2]], checked = function() return state[key] == item[1] end,
-                onClick = function() state[key] = item[1] if after then after() end List.Refresh() end }
+                onClick = function()
+                    state[key] = item[1]
+                    state.limit = PAGE
+                    Prefs()[key] = item[1]            -- scope and type filter are remembered
+                    List.Refresh()
+                end }
         end
         return entries
     end
@@ -560,7 +585,11 @@ local function Create()
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local point, _, relPoint, x, y = self:GetPoint()
+        Prefs().pos = { point = point, relPoint = relPoint, x = x, y = y }
+    end)
     frame:SetClampedToScreen(true)
     frame:SetFrameStrata("HIGH")
     frame:SetToplevel(true)                 -- clicking it brings it in front of other windows (the settings)
@@ -569,6 +598,15 @@ local function Create()
 
     local p = Prefs()
     if p.sort and ColumnOf(p.sort) then state.sort, state.desc = p.sort, p.desc == true end
+    for _, list in ipairs({ { SCOPES, "scope" }, { TYPE_FILTERS, "filter" } }) do
+        for _, item in ipairs(list[1]) do
+            if p[list[2]] == item[1] then state[list[2]] = item[1] end
+        end
+    end
+    if p.pos and p.pos.point then
+        frame:ClearAllPoints()
+        frame:SetPoint(p.pos.point, UIParent, p.pos.relPoint or p.pos.point, p.pos.x or 0, p.pos.y or 0)
+    end
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", 0, -5)
@@ -604,15 +642,16 @@ local function Create()
     search:SetMaxLetters(40)
     search:SetScript("OnTextChanged", function(box)
         state.text = box:GetText() or ""
+        state.limit = PAGE
         List.Refresh()
     end)
     search:SetScript("OnEscapePressed", function(box) box:ClearFocus() end)
     search:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
     clear:SetScript("OnClick", function() search:SetText("") search:ClearFocus() end)
 
-    MenuButton(12, 118, function() return LabelOf(SCOPES, state.scope) end, Choices(SCOPES, "scope"))
-    MenuButton(134, 130, function() return (L["Sort: %s"]):format(L[ColumnOf(state.sort).label]) end, SortEntries)
-    local dir = MenuButton(268, 54, function() return state.desc and L["Desc"] or L["Asc"] end, function()
+    MenuButton(12, 134, function() return LabelOf(SCOPES, state.scope) end, Choices(SCOPES, "scope"))
+    MenuButton(150, 130, function() return (L["Sort: %s"]):format(L[ColumnOf(state.sort).label]) end, SortEntries)
+    local dir = MenuButton(284, 54, function() return state.desc and L["Desc"] or L["Asc"] end, function()
         return {}
     end)
     dir:SetScript("OnClick", function()
@@ -625,8 +664,8 @@ local function Create()
         GameTooltip:Show()
     end)
     dir:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    MenuButton(326, 124, function() return LabelOf(TYPE_FILTERS, state.filter) end, Choices(TYPE_FILTERS, "filter"))
-    MenuButton(454, 94, function() return L["Columns"] end, ColumnEntries)
+    MenuButton(342, 116, function() return LabelOf(TYPE_FILTERS, state.filter) end, Choices(TYPE_FILTERS, "filter"))
+    MenuButton(462, 86, function() return L["Columns"] end, ColumnEntries)
 
     headerBar = CreateFrame("Frame", nil, frame)
     headerBar:SetPoint("TOPLEFT", 10, -110)
@@ -650,9 +689,18 @@ local function Create()
 
     status = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     status:SetPoint("BOTTOMLEFT", 16, 14)
+    more = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    more:SetSize(100, 20)
+    more:SetPoint("BOTTOM", 0, 8)
+    more:SetText(L["Show more"])
+    more:SetScript("OnClick", function()
+        state.limit = state.limit + PAGE
+        Render()
+    end)
+    more:Hide()
     local hint = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     hint:SetPoint("BOTTOMRIGHT", -16, 14)
-    hint:SetText(L["Click: waypoint  -  Shift-click: arrow  -  Right-click: more"])
+    hint:SetText(L["Click: waypoint - Shift: arrow - Ctrl: show on map - Right: more"])
 
     Layout()
 
@@ -663,7 +711,19 @@ local function Create()
         elapsed = elapsed + dt
         if elapsed > 2 then
             elapsed = 0
-            Render()
+            if state.sort == "distance" then
+                Render()
+            else
+                -- the order does not depend on distance: just refresh the numbers in the rows
+                for i = 1, #rows do
+                    local row = rows[i]
+                    local item = row.item
+                    if item and row:IsShown() and row.cells.distance and row.cells.distance:IsShown() then
+                        item.dist = AQ.Minimap.Distance(item.entry)
+                        row.cells.distance:SetText(Distance(item.dist))
+                    end
+                end
+            end
         end
     end)
     frame:SetScript("OnShow", function() List.Refresh() end)

@@ -37,22 +37,38 @@ local function Remember(unit, questId, title, level)
         m = mapId, x = math.floor(x * 1000 + 0.5) / 10, y = math.floor(y * 1000 + 0.5) / 10, t = time(),
     }
     AQ.Data.InvalidateMap(mapId)
-    AQ.Print(("learned a new quest: %s"):format(title or ("Quest " .. questId)))
     AQ.RequestRefresh()
+    return title or ((AQ.L["Quest %d"]):format(questId))
+end
+
+-- One chat line for everything learned from one window (a giver can offer several quests at once).
+local function Announce(titles)
+    if #titles == 0 then return end
+    local L = AQ.L
+    if #titles == 1 then
+        AQ.Print(L["learned a new quest"] .. ": " .. titles[1])
+    else
+        AQ.Print((L["learned %d new quests"]):format(#titles) .. ": " .. table.concat(titles, ", ", 1, math.min(#titles, 4))
+            .. (#titles > 4 and ", ..." or ""))
+    end
 end
 
 local function ScanGossip()
+    if not (AQ.db and AQ.db.learnQuests) then return end
     if not (C_GossipInfo and C_GossipInfo.GetAvailableQuests) then return end
+    local titles = {}
     for _, q in ipairs(C_GossipInfo.GetAvailableQuests() or {}) do
-        Remember("npc", q.questID, q.title, q.questLevel)
+        titles[#titles + 1] = Remember("npc", q.questID, q.title, q.questLevel)
     end
+    Announce(titles)
 end
 
 local function ScanDetail()
     local id = GetQuestID and GetQuestID()
     if not id or id == 0 then return end
     local level = C_QuestLog and C_QuestLog.GetQuestDifficultyLevel and C_QuestLog.GetQuestDifficultyLevel(id)
-    Remember("questnpc", id, GetTitleText and GetTitleText() or nil, level)
+    local title = Remember("questnpc", id, GetTitleText and GetTitleText() or nil, level)
+    if title then Announce({ title }) end
 end
 
 -- Rewards: the quest dialog shows experience, money and items, so remember them for the quest list's columns.

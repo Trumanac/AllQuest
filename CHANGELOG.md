@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.2
+- Quest data refreshed (QuestieDB 1.0.10): 4,650 quests, 2,274 giver spots. XP and money are filled in for the quests the game
+  could tell about; the rest fill in as you open quest windows.
+- Quest list: scope "Map I am viewing", Ctrl-click a row to show it on the map, "Show more" past 250 rows, and it remembers
+  its scope, type filter and window position. Number columns show a dash where nothing is known; distances update in place
+  instead of re-sorting the list every two seconds.
+- New option: hide quests you cannot take yet (required level above yours). Notices no longer count those as new.
+- Key bindings for the quest list, the markers and the settings (Game menu > Options > Key Bindings > AddOns).
+- Drop-down menus show a tooltip for presets and close with Escape; the settings window remembers where you left it.
+- Public API version 3: `IsAvailable`, `GetGivers`, `GetQuestInfo` and the `AllQuest_Hidden` callback.
+- Chat messages, giver names ("NPC 123", "Dungeon: ...") and preset descriptions are translated (German, French, Spanish).
+- Fix: quests learned in game in a zone the data has no givers for now get their markers.
+- Fix: a race missing from the data no longer hides every racial quest.
+- Fix: the "another addon is steering the waypoint" check keeps working after your first click.
+- Fix: markers no longer hang on to a hover tooltip after they are redrawn; fewer hitches from reputation and skill gains,
+  settings clicks and the minimap markers while you stand still; several unknown quests in one gossip window give one chat line.
+- Fix: un-hiding Blizzard's objective tracker no longer calls its update directly.
+
 ## 1.0.1
 - Quest list is now a sortable table: Level, Quest, Giver, Zone, Distance, XP, Money and Rewards columns. Click a header
   to sort (click again to flip the direction); the Columns button switches columns on and off. Choices are remembered.

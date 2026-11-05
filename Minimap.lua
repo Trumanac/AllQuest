@@ -131,7 +131,10 @@ function M.Distance(entry)
     return math.sqrt(dx * dx + dy * dy)
 end
 
+local placeDirty, lastView = true, {}
+
 function M.Rebuild()
+    placeDirty = true
     ReleaseAll()
     currentMaps = nil
     local db = AQ.db
@@ -189,6 +192,14 @@ local function Place()
     end
     local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
     local halfW, halfH = Minimap:GetWidth() / 2, Minimap:GetHeight() / 2
+    -- nothing moved since the last time (standing still, same zoom): the markers are already where they belong
+    local v = lastView
+    if not placeDirty and v.px == px and v.py == py and v.facing == facing and v.radius == radius
+        and v.square == square and v.halfW == halfW then
+        return
+    end
+    placeDirty = false
+    v.px, v.py, v.facing, v.radius, v.square, v.halfW = px, py, facing, radius, square, halfW
     local sin, cos = math.sin(facing), math.cos(facing)
 
     for _, a in ipairs(active) do

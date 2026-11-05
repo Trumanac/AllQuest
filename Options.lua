@@ -34,7 +34,10 @@ function AQ.CloseMenu()
 end
 
 local function MeasureText(text)
-    menu.measure = menu.measure or menu:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    if not menu.measure then
+        menu.measure = menu:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        menu.measure:SetAlpha(0)             -- only used to measure text widths
+    end
     menu.measure:SetText(text)
     return menu.measure:GetStringWidth() or 60
 end
@@ -79,6 +82,14 @@ local function BuildMenu(entries)
         local clickable = e.onClick ~= nil and not e.title and not e.divider
         line:SetEnabled(clickable)
         line:EnableMouse(clickable)
+        line:SetScript("OnEnter", function(self)
+            if e.tooltip then
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                e.tooltip(GameTooltip)
+                GameTooltip:Show()
+            end
+        end)
+        line:SetScript("OnLeave", function() GameTooltip:Hide() end)
         line:SetScript("OnClick", function()
             if e.onClick then e.onClick() end
             if e.keepOpen then BuildMenu(entries) else AQ.CloseMenu() end
@@ -97,6 +108,16 @@ function AQ.OpenMenu(anchor, entries)
         catcher:SetFrameStrata("TOOLTIP")
         catcher:RegisterForClicks("AnyUp")
         catcher:SetScript("OnClick", AQ.CloseMenu)
+        -- Escape closes the menu (and only the menu)
+        catcher:EnableKeyboard(true)
+        catcher:SetScript("OnKeyDown", function(self, key)
+            if key == "ESCAPE" then
+                self:SetPropagateKeyboardInput(false)
+                AQ.CloseMenu()
+            else
+                self:SetPropagateKeyboardInput(true)
+            end
+        end)
         catcher:Hide()
         menu = CreateFrame("Frame", nil, UIParent)
         menu:SetFrameStrata("TOOLTIP")
@@ -136,15 +157,19 @@ function AQ.NewDropdown(parent, width, text, setup)
     local function Entries()
         local entries = {}
         local function Add(label, selected, onClick)
-            entries[#entries + 1] = { text = label, checked = selected, onClick = function()
+            local entry = { text = label, checked = selected, onClick = function()
                 if onClick then onClick() end
                 dd.Update()
             end }
+            -- like the game's menu items, an entry can be given a tooltip: entry:SetTooltip(function(tt) ... end)
+            entry.SetTooltip = function(self, fn) self.tooltip = fn return self end
+            entries[#entries + 1] = entry
+            return entry
         end
         local root = {
-            CreateRadio = function(_, label, selected, onClick) Add(label, selected, onClick) end,
-            CreateCheckbox = function(_, label, selected, onClick) Add(label, selected, onClick) end,
-            CreateButton = function(_, label, onClick) Add(label, nil, onClick) end,
+            CreateRadio = function(_, label, selected, onClick) return Add(label, selected, onClick) end,
+            CreateCheckbox = function(_, label, selected, onClick) return Add(label, selected, onClick) end,
+            CreateButton = function(_, label, onClick) return Add(label, nil, onClick) end,
             CreateTitle = function(_, label) entries[#entries + 1] = { text = label, title = true } end,
             CreateDivider = function() entries[#entries + 1] = { divider = true } end,
         }
@@ -281,7 +306,10 @@ local function NewBuilder(parent, startY)
                 local kind, key = AQ.CurrentPreset()
                 for _, preset in ipairs(AQ.presetList) do
                     root:CreateRadio(L[preset.name], function() return kind == "builtin" and key == preset.key end,
-                        function() AQ.ApplyPreset(preset.key) end)
+                        function() AQ.ApplyPreset(preset.key) end):SetTooltip(function(tt)
+                            tt:AddLine(L[preset.name], 1, 1, 1)
+                            tt:AddLine(L[preset.tip], 1, 0.82, 0, true)
+                        end)
                 end
                 local saved = AQ.UserPresetNames()
                 if #saved > 0 then
@@ -392,7 +420,7 @@ StaticPopupDialogs["ALLQUEST_EXPORT"] = {
 
 local function DoImport(text)
     local ok, result = AQ.ImportString(text)
-    if ok then AQ.Print(("imported %d settings."):format(result)) else AQ.Print("import failed: " .. result) end
+    if ok then AQ.Print((L["imported %d settings."]):format(result)) else AQ.Print((L["import failed: %s"]):format(tostring(result))) end
 end
 
 StaticPopupDialogs["ALLQUEST_IMPORT"] = {
@@ -458,6 +486,8 @@ local function Fill(B, resize)
     A:Dynamic(function() return L["Same scale as the game: up to +2 yellow, +3/+4 orange, +5 and up red."] end, 22)
     CheckNot(A, "Show low level (grey) quests", "hideLowLevel",
         "Quests that are trivial for you. Off: they are hidden.")
+    Check(A, "Hide quests I cannot take yet", "hideLocked",
+        "Quests whose required level is above yours. Off: they show faded until you reach the level.")
     Check(A, "Show repeatable quests", "showRepeatable")
     Check(A, "Show holiday quests (while the holiday is on)", "showEventQuests",
         "Quests tied to a holiday appear only while that holiday is running, according to the game calendar.")
@@ -690,11 +720,20 @@ local function CreateStandalone()
     standalone = CreateFrame("Frame", "AllQuestOptions", UIParent, "BasicFrameTemplateWithInset")
     standalone:SetSize(WIDTH + 50, 600)
     standalone:SetPoint("CENTER")
+    local pos = AQ.shared.optionsPos
+    if pos and pos.point then
+        standalone:ClearAllPoints()
+        standalone:SetPoint(pos.point, UIParent, pos.relPoint or pos.point, pos.x or 0, pos.y or 0)
+    end
     standalone:SetMovable(true)
     standalone:EnableMouse(true)
     standalone:RegisterForDrag("LeftButton")
     standalone:SetScript("OnDragStart", standalone.StartMoving)
-    standalone:SetScript("OnDragStop", standalone.StopMovingOrSizing)
+    standalone:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local point, _, relPoint, x, y = self:GetPoint()
+        AQ.shared.optionsPos = { point = point, relPoint = relPoint, x = x, y = y }
+    end)
     standalone:SetClampedToScreen(true)
     standalone:SetFrameStrata("DIALOG")
     standalone:SetToplevel(true)            -- clicking it brings it in front of other windows (the quest list)

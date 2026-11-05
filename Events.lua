@@ -39,7 +39,7 @@ function Events.Refresh()
         end
     end)
     today = set
-    calendarUsable = ok and any
+    calendarUsable = ok and any   -- an empty answer may just mean the calendar has not loaded yet: then the date windows decide
     return calendarUsable
 end
 

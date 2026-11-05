@@ -11,7 +11,7 @@ It doesn't track your active quests or tell you how to complete them. It answers
 ## Find quests
 
 - **Markers** on the world map *and* the minimap, only for quests available to your character
-- **Quest list** (`/aq list`, a button on the world map, or middle-click the minimap button): search quests, givers and zones; sort by level, name, distance or zone; filter by type; click a row for a waypoint
+- **Quest list** (`/aq list`, a button on the world map, or middle-click the minimap button): a sortable table with level, quest, giver, zone, distance, XP, money and reward columns you can switch on and off; search quests, givers and zones; filter by type; hover a reward icon for the item tooltip; click a row for a waypoint
 - **New-quest notice**: a chat message when a level-up or a turned-in quest opens up new quests (switch it off if you like)
 - **Quests the usual map misses:** dungeon quests at the dungeon entrance, dropped-item quests where the item drops (with who drops it and how often), holiday quests only while the holiday is running, and group quests with the suggested group size
 - **Learns as you play:** if a giver offers a quest the built-in database doesn't know, AllQuest remembers it from then on

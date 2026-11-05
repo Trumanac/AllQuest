@@ -25,13 +25,15 @@ local DB
 local raceMask, classFlag, faction
 
 local function HasBit(mask, flag)
-    return (not mask) or mask == 0 or (mask % (flag * 2)) >= flag
+    -- no restriction, or the character's race/class is unknown to the data: do not hide the quest
+    if (not mask) or mask == 0 or (not flag) or flag == 0 then return true end
+    return (mask % (flag * 2)) >= flag
 end
 
 function Data.Init()
     DB = AQ.DB
     if not next(DB.quests) then
-        AQ.Print("|cffff4040The quest database is missing (Data/DB_*.lua), so there are no markers.|r")
+        AQ.Print("|cffff4040" .. AQ.L["The quest database is missing (Data/DB_*.lua), so there are no markers."] .. "|r")
         return
     end
     for _, list in pairs(DB.maps) do
@@ -52,18 +54,18 @@ end
 -- Title and subtitle for a giver spot's tooltip.
 function Data.StarterInfo(entry)
     local kind, id = entry.kind, entry.id
-    if entry.learnedName then return entry.learnedName, "Learned in game" end
+    if entry.learnedName then return entry.learnedName, AQ.L["Learned in game"] end
     if kind == "n" then
         local n = DB.npcs[id]
-        return n and n[1] or ("NPC " .. id), n and n[2]
+        return n and n[1] or ((AQ.L["NPC %d"]):format(id)), n and n[2]
     elseif kind == "o" then
-        return DB.objs[id] or ("Object " .. id)
+        return DB.objs[id] or ((AQ.L["Object %d"]):format(id))
     elseif kind == "i" then
         local it = DB.items[id]
         -- what drops it is listed under "Dropped by:" in the panel, not repeated here
-        return it and it[1] or ("Item " .. id)
+        return it and it[1] or ((AQ.L["Item %d"]):format(id))
     end
-    return "Dungeon: " .. (DB.dungeons[id] or ("Area " .. id)), "Quests given inside - enter here"
+    return (AQ.L["Dungeon: %s"]):format(DB.dungeons[id] or ((AQ.L["Area %d"]):format(id))), AQ.L["Quests given inside - enter here"]
 end
 
 local englishClient = GetLocale() == "enUS" or GetLocale() == "enGB"
@@ -90,8 +92,19 @@ function Data.RequiredLevel(id)
     return d and d[3] or 0
 end
 
+-- Maps that only have quests learned in game (a zone the bundled data has no givers for).
+local learnedMaps
+local function LearnedMaps()
+    if learnedMaps then return learnedMaps end
+    learnedMaps = {}
+    for _, l in pairs(AQ.shared.learned) do
+        if l.m then learnedMaps[l.m] = true end
+    end
+    return learnedMaps
+end
+
 function Data.HasMap(uiMapId)
-    return DB ~= nil and DB.maps[uiMapId] ~= nil
+    return DB ~= nil and (DB.maps[uiMapId] ~= nil or LearnedMaps()[uiMapId] == true)
 end
 
 -- What drops a quest-starting item: a list of "Name (lvl 5-6) - 12%" lines and how many more there are.
@@ -109,8 +122,16 @@ end
 function Data.Rewards(id)
     local d = DB.quests[id]
     local r = (d and d[18]) or AQ.shared.rewards[id]
+    local seen = AQ.shared.rewards[id]
     if not r then return end
-    return r[1], r[2], r[3] or {}, r[4] or {}
+    -- the bundled data holds 0 where it could not find out; what was seen in game is exact
+    local xp, money = r[1], r[2]
+    if seen then
+        if (not xp or xp == 0) then xp = seen[1] end
+        if (not money or money == 0) then money = seen[2] end
+    end
+    local items, choices = r[3] or (seen and seen[3]), r[4] or (seen and seen[4])
+    return (xp and xp > 0) and xp or nil, money, items or {}, choices or {}
 end
 
 -- Which quests each quest unlocks (the reverse of the prerequisite lists), built on first use.
@@ -239,10 +260,12 @@ end
 
 function Data.InvalidateMap(uiMapId)
     mapCache[uiMapId] = nil
+    learnedMaps = nil
 end
 
 function Data.InvalidateAll()
     mapCache = {}
+    learnedMaps = nil
 end
 
 -- Giver spots of one map, with their quest records; built on first use.
@@ -367,6 +390,7 @@ local function Evaluate(q, ctx)
 
     if not db.showAll and math.max(ql, req) > pl + db.levelsAbove then return end
     local locked = req > pl                    -- cannot be picked up yet
+    if locked and db.hideLocked then return end
     local trivial = ql < pl - ctx.green        -- grey for this character
     if trivial and db.hideLowLevel then return end
 
@@ -491,6 +515,9 @@ function Data.MapIds()
     local list = {}
     if DB then
         for uiMapId in pairs(DB.maps) do list[#list + 1] = uiMapId end
+        for uiMapId in pairs(LearnedMaps()) do
+            if not DB.maps[uiMapId] then list[#list + 1] = uiMapId end
+        end
     end
     return list
 end

@@ -34,7 +34,7 @@ function Tracker.Apply()
         frame:Hide()
     elseif Tracker.hidden then
         -- let Blizzard decide again whether it should be visible
-        if frame.Update then frame:Update() else frame:Show() end
+        frame:Show()
     end
     Tracker.hidden = wanted and true or false
 end

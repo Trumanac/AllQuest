@@ -27,6 +27,7 @@ AQ.defaults = {
     notifyNewQuests = true,  -- chat message when a level-up or a turned-in quest makes new quests available
     showChainInfo = true,    -- one line in the quest panel: the quest before and after in its chain
     showListButton = true,   -- button on the world map that opens the quest list
+    hideLocked = false,      -- hide quests whose required level is above yours (shown faded otherwise)
     markerStyle = "exclaim", -- marker shape: exclaim, diamond, round
     markerOutline = false,   -- dark outline behind markers, for contrast
     markerAlpha = 1.0,       -- marker opacity
@@ -44,7 +45,7 @@ AQ.defaults = {
 --   list         the quest list's own choices: { cols = { [column] = true/false }, sort, desc }
 --   profiles     settings profiles: name -> settings;  assign: "Name-Realm" -> profile name
 AQ.sharedDefaults = { learned = {}, presets = {}, ignored = {}, groupSizes = {}, profiles = {}, assign = {},
-    rewards = {}, list = {}, advancedOpen = false }
+    rewards = {}, list = {}, optionsPos = {}, advancedOpen = false }
 
 -- Presets. They set the "how much do I see" settings below; everything else (colours, minimap button,
 -- tracker ...) is a personal choice a preset leaves alone. The Detailed preset is also the first-load default.
@@ -144,7 +145,7 @@ end
 function AQ.ApplyPreset(name)
     local values, shown = FindPreset(name or "")
     if not values then
-        AQ.Print("no preset called '" .. tostring(name) .. "'.")
+        AQ.Print((AQ.L["no preset called '%s'."]):format(tostring(name)))
         return
     end
     for _, k in ipairs(AQ.presetKeys) do
@@ -159,7 +160,7 @@ function AQ.SavePreset(name)
     if name == "" then return end
     for _, preset in ipairs(AQ.presetList) do
         if preset.name:lower() == name:lower() or preset.key == name:lower() then
-            AQ.Print("'" .. name .. "' is a built-in preset - choose another name.")
+            AQ.Print((AQ.L["'%s' is a built-in preset - choose another name."]):format(name))
             return
         end
     end
@@ -169,14 +170,14 @@ function AQ.SavePreset(name)
     local copy = {}
     for _, k in ipairs(AQ.presetKeys) do copy[k] = AQ.db[k] end
     AQ.shared.presets[name] = copy
-    AQ.Print("saved preset '" .. name .. "'.")
+    AQ.Print((AQ.L["saved preset '%s'."]):format(name))
     AQ.SettingsChanged()
 end
 
 function AQ.DeletePreset(name)
     if AQ.shared.presets[name] then
         AQ.shared.presets[name] = nil
-        AQ.Print("deleted preset '" .. name .. "'.")
+        AQ.Print((AQ.L["deleted preset '%s'."]):format(name))
         AQ.SettingsChanged()
     end
 end
@@ -272,7 +273,7 @@ function AQ.ProfileCreate(name)
     local S = AQ.shared
     for existing in pairs(S.profiles) do
         if existing:lower() == name:lower() then
-            AQ.Print("a profile called '" .. existing .. "' already exists.")
+            AQ.Print((AQ.L["a profile called '%s' already exists."]):format(existing))
             return
         end
     end
@@ -287,7 +288,7 @@ function AQ.ProfileCreate(name)
         end
     end
     S.profiles[name] = copy
-    AQ.Print("created profile '" .. name .. "' for this character.")
+    AQ.Print((AQ.L["created profile '%s' for this character."]):format(name))
     AQ.ProfileUse(name)
 end
 
@@ -298,37 +299,46 @@ function AQ.ProfileDelete(name)
     for char, assigned in pairs(S.assign) do
         if assigned == name then S.assign[char] = "Default" end
     end
-    AQ.Print("deleted profile '" .. name .. "'.")
+    AQ.Print((AQ.L["deleted profile '%s'."]):format(name))
     if AQ.profile == name then AQ.ProfileUse("Default") else AQ.SettingsChanged() end
 end
 
 ---------------------------------------------------------------------------------------------
 -- Hidden quests and givers (the ignore list; kept for the whole account)
 
+-- Tell other addons (AllQuestAPI callback) that the hidden quests, givers or zones changed.
+function AQ.FireHidden()
+    if AQ.API and AQ.API.callbacks then AQ.API.callbacks:Fire("AllQuest_Hidden") end
+end
+
 function AQ.IgnoreQuest(id, name)
     AQ.shared.ignored.quests[id] = name or true
-    AQ.Print(("hid quest: %s (restore it in the options)"):format(tostring(name or id)))
+    AQ.Print((AQ.L["hid quest: %s (restore it in the options)"]):format(tostring(name or id)))
     AQ.SettingsChanged()
+    AQ.FireHidden()
 end
 
 function AQ.IgnoreGiver(key, name)
     AQ.shared.ignored.givers[key] = name or true
-    AQ.Print(("hid giver: %s (restore it in the options)"):format(tostring(name or key)))
+    AQ.Print((AQ.L["hid giver: %s (restore it in the options)"]):format(tostring(name or key)))
     AQ.SettingsChanged()
+    AQ.FireHidden()
 end
 
 function AQ.IgnoreZone(uiMapId, name)
     AQ.shared.ignored.zones[uiMapId] = name or true
-    AQ.Print(("hid zone: %s (restore it in the options)"):format(tostring(name or uiMapId)))
+    AQ.Print((AQ.L["hid zone: %s (restore it in the options)"]):format(tostring(name or uiMapId)))
     AQ.SettingsChanged()
+    AQ.FireHidden()
 end
 
 -- A chain: the quest and every quest that follows from it.
 function AQ.IgnoreChain(id, name)
     AQ.shared.ignored.chains[id] = name or true
     AQ.Data.DirtyIgnored()
-    AQ.Print(("hid quest chain from: %s (restore it in the options)"):format(tostring(name or id)))
+    AQ.Print((AQ.L["hid quest chain from: %s (restore it in the options)"]):format(tostring(name or id)))
     AQ.SettingsChanged()
+    AQ.FireHidden()
 end
 
 local IGNORE_SETS = { quest = "quests", giver = "givers", zone = "zones", chain = "chains" }
@@ -355,13 +365,15 @@ function AQ.Unignore(kind, key)
     set[key] = nil
     if kind == "chain" then AQ.Data.DirtyIgnored() end
     AQ.SettingsChanged()
+    AQ.FireHidden()
 end
 
 function AQ.RestoreAllIgnored()
     for _, setName in pairs(IGNORE_SETS) do AQ.shared.ignored[setName] = {} end
     AQ.Data.DirtyIgnored()
-    AQ.Print("restored everything you hid.")
+    AQ.Print(AQ.L["restored everything you hid."])
     AQ.SettingsChanged()
+    AQ.FireHidden()
 end
 
 ---------------------------------------------------------------------------------------------
@@ -432,7 +444,7 @@ function AQ.ResetSettings()
     for k, v in pairs(AQ.defaults) do
         AQ.db[k] = type(v) == "table" and {} or v
     end
-    AQ.Print("settings reset to the defaults.")
+    AQ.Print(AQ.L["settings reset to the defaults."])
     AQ.SettingsChanged()
 end
 
@@ -443,7 +455,7 @@ function AQ.CheckClientBuild()
     if not (current and made) or tostring(current) == tostring(made) then return end
     if AQ.shared.noticedBuild == current then return end
     AQ.shared.noticedBuild = current
-    AQ.Print(("the game was updated since the quest database was made (%s). Quests the patch added are picked up as you meet their givers."):format(
+    AQ.Print((AQ.L["the game was updated since the quest database was made (%s). Quests the patch added are picked up as you meet their givers."]):format(
         AQ.DB.meta.date or "unknown date"))
 end
 
@@ -489,6 +501,15 @@ function AQ.RequestSlowRefresh()
         slowPending = false
         AQ.RefreshAll()
     end)
+end
+
+-- Key bindings (Bindings.xml) call these.
+function _G.AllQuest_ToggleList() if AQ.QuestList then AQ.QuestList.Toggle() end end
+function _G.AllQuest_OpenOptions() if AQ.ToggleOptions then AQ.ToggleOptions() end end
+function _G.AllQuest_ToggleMarkers()
+    if not AQ.db then return end
+    AQ.db.enabled = not AQ.db.enabled
+    AQ.SettingsChanged()
 end
 
 local frame = CreateFrame("Frame")

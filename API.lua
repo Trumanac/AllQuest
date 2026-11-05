@@ -7,11 +7,16 @@ local AddOn, AQ = ...
 --   AllQuestAPI.IsReady()                     true once the quest database is loaded
 --   AllQuestAPI.GetQuests(uiMapId)            list of quests available on a map (see Describe for the fields)
 --   AllQuestAPI.GetNearest([limit], [maxYards])  the closest available quests to the player, nearest first
+--   AllQuestAPI.IsAvailable(questId)          true when the quest is available to the player right now (markers show it)
+--   AllQuestAPI.GetGivers(questId)            every giver spot of an available quest (same fields as GetQuests)
+--   AllQuestAPI.GetQuestInfo(questId)         one entry like GetQuests gives (the nearest giver), or nil when not available
+--   AllQuestAPI:RegisterCallback("AllQuest_Hidden", fn)      called after the player hid or restored quests, givers or zones
 --   AllQuestAPI.GetRewards(questId)           xp, money (copper), { itemId ... }, { choiceItemId ... }; nil when unknown
 --   AllQuestAPI.IsHidden(questId)             true when the player hid the quest or its chain
 --   AllQuestAPI:RegisterCallback("AllQuest_Refreshed", fn)   called after the markers were redrawn
 -- version 2: quests carry their rewards, and GetRewards exists
-local API = { version = 2 }
+-- version 3: IsAvailable, GetGivers and GetQuestInfo; GetQuests takes options; the AllQuest_Hidden callback
+local API = { version = 3 }
 AQ.API = API
 _G.AllQuestAPI = API
 
@@ -49,6 +54,37 @@ function API.GetQuests(uiMapId)
         for _, q in ipairs(pin.quests) do list[#list + 1] = Describe(pin, q) end
     end
     return list
+end
+
+-- Every giver spot of an available quest, searched on every map with data.
+function API.GetGivers(questId)
+    local list = {}
+    if not API.IsReady() or not questId then return list end
+    for _, uiMapId in ipairs(AQ.Data.MapIds()) do
+        for _, pin in ipairs(AQ.PinsFor(uiMapId)) do
+            for _, q in ipairs(pin.quests) do
+                if q.id == questId then
+                    local item = Describe(pin, q)
+                    item.distance = AQ.Minimap.Distance(pin.entry)
+                    list[#list + 1] = item
+                end
+            end
+        end
+    end
+    table.sort(list, function(a, b)
+        if a.distance and b.distance and a.distance ~= b.distance then return a.distance < b.distance end
+        if (a.distance == nil) ~= (b.distance == nil) then return a.distance ~= nil end
+        return (a.mapId or 0) < (b.mapId or 0)
+    end)
+    return list
+end
+
+function API.IsAvailable(questId)
+    return #API.GetGivers(questId) > 0
+end
+
+function API.GetQuestInfo(questId)
+    return API.GetGivers(questId)[1]
 end
 
 function API.GetNearest(limit, maxYards)
