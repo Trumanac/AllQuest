@@ -43,6 +43,7 @@ It doesn't track your active quests or tell you how to complete them. It answers
 - **Profiles** per character, and **export / import** of your settings as a text string
 - Minimap button (drag, lock, hide), world map on/off button, and an option to hide Blizzard's objective tracker
 - A short basic page, with everything else tucked under **Advanced**
+- **Key bindings** for the quest list, the markers and the settings (Game menu > Options > Key Bindings > AddOns)
 - Translated into **German, French and Spanish** (first drafts - corrections welcome); quest titles follow your client language when the game has them
 
 ## Getting started
@@ -55,4 +56,5 @@ Install, log in, open the world map - the markers are already there. Type `/aq` 
 
 - Quest and NPC names in the built-in database are English. The database is a snapshot, so quests added by later patches are picked up by the learning feature as you meet their givers.
 - Availability is worked out from the quest data (levels, races, classes, prerequisites, skills, reputation). A few hidden conditions can't be known, so an occasional marker may not be takeable.
+- XP, money and reward items come from the built-in data for most quests; any that are missing are filled in as you open quest windows in game.
 - Free and open source (GPL-3.0). Bug reports and suggestions are very welcome.
