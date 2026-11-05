@@ -21,7 +21,6 @@
 - Fix: the "another addon is steering the waypoint" check keeps working after your first click.
 - Fix: markers no longer hang on to a hover tooltip after they are redrawn; fewer hitches from reputation and skill gains,
   settings clicks and the minimap markers while you stand still; several unknown quests in one gossip window give one chat line.
-- Fix: un-hiding Blizzard's objective tracker no longer calls its update directly.
 
 ## 1.0.1
 - Quest list is now a sortable table: Level, Quest, Giver, Zone, Distance, XP, Money and Rewards columns. Click a header
