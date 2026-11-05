@@ -1,8 +1,8 @@
 # Changelog
 
 ## 1.0.2
-- Quest data refreshed (QuestieDB 1.0.10): 4,650 quests, 2,274 giver spots. XP is filled in for about 3,350 quests
-  (the quest database's base XP); money and reward items fill in as you open quest windows.
+- Quest data refreshed: 4,650 quests, 2,274 giver spots, and rewards for most of them (XP for about 4,000 quests, money for about
+  970, reward and choose-one items for about 1,800); anything missing fills in as you open quest windows.
 - Quest list: scope "Map I am viewing", Ctrl-click a row to show it on the map, "Show more" past 250 rows, and it remembers
   its scope, type filter and window position. Number columns show a dash where nothing is known; distances update in place
   instead of re-sorting the list every two seconds.
