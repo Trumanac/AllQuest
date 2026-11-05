@@ -313,7 +313,8 @@ local function NativeMarkerInUse()
     if qp and qp.Navigation and qp.Navigation.worldMarkerOwned then return true end
     -- our own waypoint stays ours only while it is still the one set; anything else replaced it
     if AQ.nativeMine then
-        local point = C_Map.GetUserWaypoint and C_Map.GetUserWaypoint()
+        if not C_Map.GetUserWaypoint then return false end    -- cannot tell: trust our own record
+        local point = C_Map.GetUserWaypoint()
         local mine = AQ.nativeMine
         local same = point and point.uiMapID == mine.map and point.position
             and math.abs(point.position.x - mine.x) < 0.0005 and math.abs(point.position.y - mine.y) < 0.0005
@@ -379,34 +380,53 @@ end
 
 local function KeepOpen() return MenuResponse and MenuResponse.Refresh end
 
--- Right-click menu of a marker: waypoint, hide a quest, hide the giver.
-function AQ.OpenPinMenu(owner, info)
-    if not (info and MenuUtil and MenuUtil.CreateContextMenu) then return end
-    GameTooltip:Hide()
+-- Right-click menu of a marker: waypoint, hide a quest, hide the giver. The entries are plain data
+-- ({ text, onClick } | { text, title = true } | { divider = true }); the world map shows them with the game's
+-- own menu, windows of ours (the quest list) with AllQuest's menu, which opens in front of them.
+local function PinMenuEntries(info)
+    local L = AQ.L
     local entry = info.entry
     local name = AQ.Data.StarterInfo(entry)
+    local entries = {
+        { text = name, title = true },
+        { text = L["Set waypoint"], onClick = function() AQ.SetWaypoint(entry) end },
+        { text = L["Point the arrow here"], onClick = function() AQ.SetWaypoint(entry, "arrow") end },
+        { text = L["Mark on the map only"], onClick = function() AQ.SetWaypoint(entry, "marker") end },
+        { divider = true },
+    }
+    for i, q in ipairs(info.quests) do
+        if i > 8 then break end
+        local qname = AQ.Data.QuestName(q.id)
+        entries[#entries + 1] = { text = (L["Hide quest"] .. ": [%d] %s"):format(q.level, qname), onClick = function()
+            AQ.IgnoreQuest(q.id, qname)
+        end }
+    end
+    entries[#entries + 1] = { text = L["Hide this giver"], onClick = function() AQ.IgnoreGiver(entry.kind .. entry.id, name) end }
+    local first = info.quests[1]
+    if first and AQ.Data.Chain(first.id) then
+        local qname = AQ.Data.QuestName(first.id)
+        entries[#entries + 1] = { text = L["Hide the quest chain from"] .. ": " .. qname, onClick = function() AQ.IgnoreChain(first.id, qname) end }
+    end
+    local zoneInfo = entry.map and C_Map.GetMapInfo(entry.map)
+    if zoneInfo and zoneInfo.name then
+        entries[#entries + 1] = { text = L["Hide this zone"] .. ": " .. zoneInfo.name, onClick = function() AQ.IgnoreZone(entry.map, zoneInfo.name) end }
+    end
+    return entries
+end
+
+function AQ.OpenPinMenu(owner, info, ownMenu)
+    if not info then return end
+    GameTooltip:Hide()
+    local entries = PinMenuEntries(info)
+    if ownMenu or not (MenuUtil and MenuUtil.CreateContextMenu) then
+        AQ.OpenMenu(owner, entries)
+        return
+    end
     MenuUtil.CreateContextMenu(owner, function(_, root)
-        root:CreateTitle(name)
-        root:CreateButton(AQ.L["Set waypoint"], function() AQ.SetWaypoint(entry) end)
-        root:CreateButton(AQ.L["Point the arrow here"], function() AQ.SetWaypoint(entry, "arrow") end)
-        root:CreateButton(AQ.L["Mark on the map only"], function() AQ.SetWaypoint(entry, "marker") end)
-        root:CreateDivider()
-        for i, q in ipairs(info.quests) do
-            if i > 8 then break end
-            local qname = AQ.Data.QuestName(q.id)
-            root:CreateButton((AQ.L["Hide quest"] .. ": [%d] %s"):format(q.level, qname), function()
-                AQ.IgnoreQuest(q.id, qname)
-            end)
-        end
-        root:CreateButton(AQ.L["Hide this giver"], function() AQ.IgnoreGiver(entry.kind .. entry.id, name) end)
-        local first = info.quests[1]
-        if first and AQ.Data.Chain(first.id) then
-            local qname = AQ.Data.QuestName(first.id)
-            root:CreateButton(AQ.L["Hide the quest chain from"] .. ": " .. qname, function() AQ.IgnoreChain(first.id, qname) end)
-        end
-        local zoneInfo = entry.map and C_Map.GetMapInfo(entry.map)
-        if zoneInfo and zoneInfo.name then
-            root:CreateButton(AQ.L["Hide this zone"] .. ": " .. zoneInfo.name, function() AQ.IgnoreZone(entry.map, zoneInfo.name) end)
+        for _, e in ipairs(entries) do
+            if e.divider then root:CreateDivider()
+            elseif e.title then root:CreateTitle(e.text)
+            else root:CreateButton(e.text, e.onClick) end
         end
     end)
 end
@@ -552,6 +572,10 @@ function AQ.BeginHover(owner, anchor, neighbours)
             end
         end)
     end
+end
+
+function AQ.HoverOwner()
+    return hover.owner
 end
 
 function AQ.EndHover()

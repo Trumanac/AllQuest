@@ -89,11 +89,18 @@ local function ScanRewards(questId, retry)
     local items = ItemIds("reward", GetNumQuestRewards and GetNumQuestRewards() or 0)
     local choices = ItemIds("choice", GetNumQuestChoices and GetNumQuestChoices() or 0)
     if not (items and choices) then
-        if not retry then C_Timer.After(1, function() pcall(ScanRewards, questId, true) end) end
+        -- only while the same quest is still on screen: the dialog is what the reward calls read
+        if not retry then
+            C_Timer.After(1, function()
+                if GetQuestID and GetQuestID() == questId then pcall(ScanRewards, questId, true) end
+            end)
+        end
         return
     end
     local record = { GetRewardXP() or 0, GetRewardMoney and GetRewardMoney() or 0, #items > 0 and items or nil, #choices > 0 and choices or nil }
     local old = AQ.shared.rewards[questId]
+    -- a max-level character sees no XP (the dialog shows money instead): keep what a lower level saw
+    if record[1] == 0 and old and (old[1] or 0) > 0 then record[1], record[2] = old[1], old[2] end
     if old and old[1] == record[1] and old[2] == record[2] and #(old[3] or {}) == #items and #(old[4] or {}) == #choices then return end
     AQ.shared.rewards[questId] = record
     if AQ.QuestList and AQ.QuestList.Refresh then AQ.QuestList.Refresh() end
@@ -129,7 +136,9 @@ end
 
 function Learn.Forget()
     local maps = {}
-    for _, l in pairs(AQ.shared.learned) do maps[l.m] = true end
+    for _, l in pairs(AQ.shared.learned) do
+        if l.m then maps[l.m] = true end
+    end
     AQ.shared.learned = {}
     for m in pairs(maps) do AQ.Data.InvalidateMap(m) end
 end

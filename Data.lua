@@ -130,8 +130,15 @@ function Data.Rewards(id)
         if (not xp or xp == 0) then xp = seen[1] end
         if (not money or money == 0) then money = seen[2] end
     end
-    local items, choices = r[3] or (seen and seen[3]), r[4] or (seen and seen[4])
-    return (xp and xp > 0) and xp or nil, money, items or {}, choices or {}
+    -- item lists: what was seen in game is exact (an empty list means "none"); the bundled data cannot tell
+    -- "no rewards" from "not known", so there a missing list stays unknown (nil)
+    local items, choices
+    if seen then
+        items, choices = seen[3] or {}, seen[4] or {}
+    else
+        items, choices = r[3], r[4]
+    end
+    return (xp and xp > 0) and xp or nil, money, items, choices
 end
 
 -- Which quests each quest unlocks (the reverse of the prerequisite lists), built on first use.

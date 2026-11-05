@@ -42,13 +42,20 @@ local function MeasureText(text)
     return menu.measure:GetStringWidth() or 60
 end
 
+local MENU_LINES = 18          -- longer lists scroll with the mouse wheel
+
 local function BuildMenu(entries)
+    menu.entries = entries
+    local visible = math.min(#entries, MENU_LINES)
+    local offset = math.max(0, math.min(menu.offset or 0, #entries - visible))
+    menu.offset = offset
     local width = 90
     for _, e in ipairs(entries) do
         if e.text then width = math.max(width, MeasureText(e.text) + 44) end
     end
     local y = -6
-    for i, e in ipairs(entries) do
+    for i = 1, visible do
+        local e = entries[offset + i]
         local line = menuLines[i]
         if not line then
             line = CreateFrame("Button", nil, menu)
@@ -97,7 +104,7 @@ local function BuildMenu(entries)
         line:Show()
         y = y - height
     end
-    for i = #entries + 1, #menuLines do menuLines[i]:Hide() end
+    for i = visible + 1, #menuLines do menuLines[i]:Hide() end
     menu:SetSize(width, -y + 6)
 end
 
@@ -124,6 +131,14 @@ function AQ.OpenMenu(anchor, entries)
         menu:SetFrameLevel(10)
         menu:SetClampedToScreen(true)
         menu:EnableMouse(true)
+        menu:EnableMouseWheel(true)
+        menu:SetScript("OnMouseWheel", function(_, delta)
+            local list = menu.entries
+            if list and #list > MENU_LINES then
+                menu.offset = (menu.offset or 0) - delta
+                BuildMenu(list)
+            end
+        end)
         local border = menu:CreateTexture(nil, "BACKGROUND", nil, -1)
         border:SetPoint("TOPLEFT", -1, 1)
         border:SetPoint("BOTTOMRIGHT", 1, -1)
@@ -135,6 +150,7 @@ function AQ.OpenMenu(anchor, entries)
     end
     if menu:IsShown() and menu.owner == anchor then AQ.CloseMenu() return end
     menu.owner = anchor
+    menu.offset = 0
     BuildMenu(entries)
     menu:ClearAllPoints()
     menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)

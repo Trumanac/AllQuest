@@ -44,8 +44,10 @@ local function Acquire()
 end
 
 local function ReleaseAll()
+    local hovered = AQ.HoverOwner and AQ.HoverOwner()
     for i = #active, 1, -1 do
         local a = active[i]
+        if a.frame == hovered then AQ.EndHover() end      -- its tooltip must not outlive the marker
         a.frame:Hide()
         a.frame:ClearAllPoints()
         free[#free + 1] = a.frame

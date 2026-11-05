@@ -11,6 +11,9 @@
 - Drop-down menus show a tooltip for presets and close with Escape; the settings window remembers where you left it.
 - Public API version 3: `IsAvailable`, `GetGivers`, `GetQuestInfo` and the `AllQuest_Hidden` callback.
 - Chat messages, giver names ("NPC 123", "Dungeon: ...") and preset descriptions are translated (German, French, Spanish).
+- Fix: the right-click menu in the quest list opens in front of the list; long menus (many hidden quests) scroll with the mouse wheel.
+- Fix: rewards seen in game are only saved for the quest that is on screen, and a max-level character no longer overwrites the XP a lower level saw.
+- Fix: changing a setting no longer makes the next level-up announce the quests the setting revealed; a quest with unknown rewards shows a dash, not "none".
 - Fix: quests learned in game in a zone the data has no givers for now get their markers.
 - Fix: a race missing from the data no longer hides every racial quest.
 - Fix: the "another addon is steering the waypoint" check keeps working after your first click.

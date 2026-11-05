@@ -470,7 +470,7 @@ end
 -- Called after any setting changed.
 function AQ.SettingsChanged()
     AQ.RefreshAll()
-    if AQ.Notify then AQ.Notify.Baseline() end
+    if AQ.Notify then AQ.Notify.Reset() end
     if AQ.UpdateMapButton then AQ.UpdateMapButton() end
     if AQ.Minimap then AQ.Minimap.UpdateButton() end
     if AQ.Tracker then AQ.Tracker.Apply() end

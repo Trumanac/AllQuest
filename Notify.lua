@@ -40,6 +40,14 @@ function Notify.Baseline()
     end)
 end
 
+-- A settings change can reveal or hide many quests at once: forget the old state so the next level-up does not
+-- announce them as new (no notice rather than a wrong one), then note the new state.
+function Notify.Reset()
+    if Notify.waiting then return end
+    base = nil
+    Notify.Baseline()
+end
+
 -- The game flags a quest as completed (and the level as new) a moment after the event, so the check waits a little.
 function Notify.Schedule()
     if Notify.waiting then return end

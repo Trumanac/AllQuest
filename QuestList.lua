@@ -128,7 +128,7 @@ local function Collect()
                     local xp, money, rewardItems, choices = AQ.Data.Rewards(q.id)
                     local row = { q = q, pin = pin, entry = pin.entry, zoneName = zoneName, giver = giver, name = name,
                         xp = xp, money = money, rewardItems = rewardItems, choices = choices,
-                        rewardCount = rewardItems and (#rewardItems + #choices) or nil }
+                        rewardCount = (rewardItems or choices) and (#(rewardItems or {}) + #(choices or {})) or nil }
                     out[#out + 1] = row
                     byGiver[key] = row
                 end
@@ -239,7 +239,7 @@ end
 local function ShowRewardIcons(row, item, col)
     local shown = 0
     if col and item.rewardCount and item.rewardCount > 0 then
-        for _, list in ipairs({ item.rewardItems, item.choices }) do
+        for _, list in ipairs({ item.rewardItems or {}, item.choices or {} }) do
             for _, id in ipairs(list) do
                 shown = shown + 1
                 if shown <= ICON_MAX then
@@ -294,7 +294,7 @@ local function AddRewardLines(item)
         for _, id in ipairs(ids) do
             local name = C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)
             if not name and C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(id) end
-            GameTooltip:AddLine(("   |T%s:14|t %s"):format(ItemIcon(id), name or ("Item " .. id)), 1, 1, 1)
+            GameTooltip:AddLine(("   |T%s:14|t %s"):format(ItemIcon(id), name or ((L["Item %d"]):format(id))), 1, 1, 1)
         end
     end
     list(item.rewardItems)
@@ -433,7 +433,7 @@ local function Row(i)
     row:SetScript("OnClick", function(self, button)
         if not self.item then return end
         if button == "RightButton" then
-            AQ.OpenPinMenu(self, { entry = self.item.entry, quests = { self.item.q }, top = self.item.q })
+            AQ.OpenPinMenu(self, { entry = self.item.entry, quests = { self.item.q }, top = self.item.q }, true)
         elseif IsControlKeyDown() then
             List.ShowOnMap(self.item.entry)
         else
