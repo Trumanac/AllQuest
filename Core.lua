@@ -41,11 +41,12 @@ AQ.defaults = {
 --   presets      presets saved by the player: name -> copy of the preset keys
 --   ignored      quests and givers the player hid: { quests = { [id] = name }, givers = { ["n123"] = name } }
 --   groupSizes   suggested group size per quest, learned from the quest log
+--   mapButtons   offset of the AllQuest map buttons from the map's top right corner: { x, y } (empty: default)
 --   rewards      rewards seen on quest dialogs: questId -> { xp, money, { itemId ... }, { choiceItemId ... } }
 --   list         the quest list's own choices: { cols = { [column] = true/false }, sort, desc }
 --   profiles     settings profiles: name -> settings;  assign: "Name-Realm" -> profile name
 AQ.sharedDefaults = { learned = {}, presets = {}, ignored = {}, groupSizes = {}, profiles = {}, assign = {},
-    rewards = {}, list = {}, optionsPos = {}, advancedOpen = false }
+    rewards = {}, list = {}, optionsPos = {}, mapButtons = {}, advancedOpen = false }
 
 -- Presets. They set the "how much do I see" settings below; everything else (colours, minimap button,
 -- tracker ...) is a personal choice a preset leaves alone. The Detailed preset is also the first-load default.
@@ -555,6 +556,9 @@ SlashCmdList.ALLQUEST = function(msg)
     if cmd == "" or cmd == "options" or cmd == "config" then
         AQ.ToggleOptions()
         return
+    elseif cmd == "resetbuttons" then
+        AQ.ResetMapButtons()
+        AQ.Print(AQ.L["Alt-drag: move the AllQuest buttons (Alt-right-click: put them back)"])
     elseif cmd == "toggle" then
         db.enabled = not db.enabled
     elseif cmd == "on" then
@@ -638,7 +642,7 @@ SlashCmdList.ALLQUEST = function(msg)
         end
         return
     else
-        AQ.Print("/allquest [options|list|preset|profile|restore|toggle|on|off|all|above N|low|minimap|tracker|events|learned|forget|settings|skills|status]")
+        AQ.Print("/allquest [options|list|preset|profile|restore|toggle|on|off|all|above N|low|minimap|tracker|events|learned|forget|settings|skills|resetbuttons|status]")
         return
     end
     AQ.SettingsChanged()

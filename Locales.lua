@@ -4,6 +4,8 @@ local _, AQ = ...
 
 local TEXT = {
     deDE = {
+        ["Alt-drag: move the AllQuest buttons (Alt-right-click: put them back)"] = "Alt+Ziehen: AllQuest-Knöpfe verschieben (Alt+Rechtsklick: zurücksetzen)",
+        ["Reset the map button position"] = "Position der Kartenknöpfe zurücksetzen",
         ["Settings"] = "Einstellungen",
         ["Show more"] = "Mehr anzeigen",
         ["Map I am viewing"] = "Angezeigte Karte",
@@ -320,6 +322,8 @@ local TEXT = {
         ["waypoint set"] = "Wegpunkt gesetzt",
     },
     frFR = {
+        ["Alt-drag: move the AllQuest buttons (Alt-right-click: put them back)"] = "Alt + glisser : déplacer les boutons AllQuest (Alt + clic droit : les remettre)",
+        ["Reset the map button position"] = "Réinitialiser la position des boutons de la carte",
         ["Settings"] = "Paramètres",
         ["Show more"] = "Afficher plus",
         ["Map I am viewing"] = "Carte affichée",
@@ -636,6 +640,8 @@ local TEXT = {
         ["waypoint set"] = "repère placé",
     },
     esES = {
+        ["Alt-drag: move the AllQuest buttons (Alt-right-click: put them back)"] = "Alt + arrastrar: mover los botones de AllQuest (Alt + clic derecho: restablecer)",
+        ["Reset the map button position"] = "Restablecer la posición de los botones del mapa",
         ["Settings"] = "Ajustes",
         ["Show more"] = "Mostrar más",
         ["Map I am viewing"] = "Mapa que estoy viendo",

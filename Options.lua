@@ -587,6 +587,7 @@ local function Fill(B, resize)
 
     Check(A, "Show the quest list button on the world map", "showListButton",
         "A small book button next to the AllQuest button that opens the quest list. The list also opens with /aq list or a middle-click on the minimap button.")
+    A:Button("Reset the map button position", function() AQ.ResetMapButtons() end, 200)
     Check(A, "Hide far markers while zooming when it lags (OpenMap)", "zoomSafeguard",
         "Only acts when the frame rate is low while you zoom or pan the seamless map: markers outside your own zone are hidden until the view settles.")
 

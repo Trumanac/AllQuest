@@ -1015,11 +1015,62 @@ end
 ---------------------------------------------------------------------------------------------
 -- World map on/off button
 
+-- Where the AllQuest button (and the small ones beside it) sit: an offset from the top right corner of the map. The
+-- default is a little left of the corner, where other addons like to put their own round buttons. Alt-drag moves
+-- the group; Alt-right-click puts it back.
+local DEFAULT_X, DEFAULT_Y = -64, -12
+
+local function MapAnchor()
+    return WorldMapFrame.ScrollContainer or WorldMapFrame
+end
+
+function AQ.PlaceMapButtons()
+    local btn = Pins.button
+    if not btn then return end
+    local pos = AQ.shared and AQ.shared.mapButtons or {}
+    btn:ClearAllPoints()
+    btn:SetPoint("TOPRIGHT", MapAnchor(), "TOPRIGHT", pos.x or DEFAULT_X, pos.y or DEFAULT_Y)
+end
+
+function AQ.ResetMapButtons()
+    if AQ.shared then AQ.shared.mapButtons = {} end
+    AQ.PlaceMapButtons()
+end
+
+local function StopMovingButtons()
+    local btn = Pins.button
+    if not (btn and btn.moving) then return end
+    btn.moving = nil
+    btn:StopMovingOrSizing()
+    -- keep the offset from the map's top right corner, inside the map
+    local anchor = MapAnchor()
+    local scale = btn:GetEffectiveScale()
+    local x = (btn:GetRight() * scale - anchor:GetRight() * anchor:GetEffectiveScale()) / scale
+    local y = (btn:GetTop() * scale - anchor:GetTop() * anchor:GetEffectiveScale()) / scale
+    x = math.max(-(anchor:GetWidth() - 30), math.min(0, x))
+    y = math.max(-(anchor:GetHeight() - 30), math.min(0, y))
+    AQ.shared.mapButtons = { x = x, y = y }
+    AQ.PlaceMapButtons()
+end
+
+-- Alt + drag on any of the three buttons moves all of them.
+local function MakeMovable(b)
+    b:RegisterForDrag("LeftButton")
+    b:HookScript("OnDragStart", function()
+        if not IsAltKeyDown() then return end
+        local main = Pins.button
+        main.moving = true
+        main:StartMoving()
+    end)
+    b:HookScript("OnDragStop", StopMovingButtons)
+end
+
 local function CreateMapButton()
-    local anchor = WorldMapFrame.ScrollContainer or WorldMapFrame
+    local anchor = MapAnchor()
     local btn = CreateFrame("Button", "AllQuestMapButton", WorldMapFrame)
     btn:SetSize(26, 26)
-    btn:SetPoint("TOPRIGHT", anchor, "TOPRIGHT", -12, -12)
+    btn:SetMovable(true)
+    btn:SetClampedToScreen(true)
     btn:SetFrameLevel(anchor:GetFrameLevel() + 50)
     btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     btn.icon = btn:CreateTexture(nil, "ARTWORK")
@@ -1027,7 +1078,9 @@ local function CreateMapButton()
     btn.icon:SetTexture("Interface\\AddOns\\AllQuest\\images\\AllQuest64")
     btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     btn:SetScript("OnClick", function(_, mouse)
-        if mouse == "RightButton" then
+        if mouse == "RightButton" and IsAltKeyDown() then
+            AQ.ResetMapButtons()
+        elseif mouse == "RightButton" then
             AQ.ToggleOptions()
         else
             AQ.db.enabled = not AQ.db.enabled
@@ -1044,11 +1097,14 @@ local function CreateMapButton()
         AQ.AddZoneCount(GameTooltip)
         GameTooltip:AddLine(AQ.L["Left-click: toggle"], 0.7, 0.7, 0.7)
         GameTooltip:AddLine(AQ.L["Right-click: options"], 0.7, 0.7, 0.7)
+        GameTooltip:AddLine(AQ.L["Alt-drag: move the AllQuest buttons (Alt-right-click: put them back)"], 0.7, 0.7, 0.7)
         AQ.AddKeyLines(GameTooltip)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
     Pins.button = btn
+    MakeMovable(btn)
+    AQ.PlaceMapButtons()
 
     -- quest-type filter, left of it
     local filter = CreateFrame("Button", "AllQuestFilterButton", WorldMapFrame)
@@ -1067,6 +1123,7 @@ local function CreateMapButton()
     end)
     filter:SetScript("OnLeave", function() GameTooltip:Hide() end)
     Pins.filterButton = filter
+    MakeMovable(filter)
 
     -- the quest list, next to it
     local list = CreateFrame("Button", "AllQuestListButton", WorldMapFrame)
@@ -1085,6 +1142,7 @@ local function CreateMapButton()
     end)
     list:SetScript("OnLeave", function() GameTooltip:Hide() end)
     Pins.listButton = list
+    MakeMovable(list)
 end
 
 -- The small buttons sit in a row left of the AllQuest button; hidden ones leave no gap.

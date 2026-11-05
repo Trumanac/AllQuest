@@ -3,6 +3,8 @@
 ## 1.0.2
 - Quest data refreshed: 4,650 quests, 2,274 giver spots, and rewards for most of them (XP for about 4,000 quests, money for about
   970, reward and choose-one items for about 1,800); anything missing fills in as you open quest windows.
+- World map buttons: they now sit a little left of the corner (other addons' round buttons covered them), Alt-drag any of the
+  three to move them (Alt-right-click on the AllQuest button, `/aq resetbuttons` or a button in the settings puts them back).
 - Quest list: scope "Map I am viewing", Ctrl-click a row to show it on the map, "Show more" past 250 rows, and it remembers
   its scope, type filter and window position. Number columns show a dash where nothing is known; distances update in place
   instead of re-sorting the list every two seconds.
