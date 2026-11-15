@@ -302,7 +302,9 @@ local function Entries(uiMapId)
     local groups = {}
     for qid, l in pairs(AQ.shared.learned) do
         -- a refreshed bundled database may now contain this giver: don't draw it twice
-        if l.m == uiMapId and not Data.IsKnownGiver(l.k, l.id, qid) then
+        -- learned data is account-wide: skip other-faction givers, and quests this race/class cannot take
+        local foreign = (l.f and faction and l.f ~= faction) or (DB.quests[qid] and not Rec(qid))
+        if l.m == uiMapId and not foreign and not Data.IsKnownGiver(l.k, l.id, qid) then
             local key = l.k .. l.id .. ":" .. l.x .. ":" .. l.y
             local g = groups[key]
             if not g then
@@ -417,7 +419,7 @@ local function Evaluate(q, ctx)
             -- a negative id means "must be active (or already done)"
             if p < 0 then
                 if not (ctx.inLog(-p) or ctx.completed(-p)) then return end
-            elseif not ctx.completed(p) then
+            elseif DB.quests[p] and not ctx.completed(p) then   -- ids the database lacks can never be checked
                 return
             end
         end

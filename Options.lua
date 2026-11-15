@@ -423,7 +423,7 @@ StaticPopupDialogs["ALLQUEST_NEW_PROFILE"] = {
 
 StaticPopupDialogs["ALLQUEST_EXPORT"] = {
     text = L["Your AllQuest settings. Copy this text (Ctrl+C):"],
-    button1 = CLOSE, hasEditBox = true, editBoxWidth = 320, timeout = 0, whileDead = true, hideOnEscape = true,
+    button1 = CLOSE, hasEditBox = true, maxLetters = 0, editBoxWidth = 320, timeout = 0, whileDead = true, hideOnEscape = true,
     OnShow = function(self)
         local box = BoxOf(self)
         box:SetText(AQ.ExportString())
@@ -441,7 +441,7 @@ end
 
 StaticPopupDialogs["ALLQUEST_IMPORT"] = {
     text = L["Paste an AllQuest settings string (Ctrl+V):"],
-    button1 = ACCEPT, button2 = CANCEL, hasEditBox = true, editBoxWidth = 320, timeout = 0, whileDead = true, hideOnEscape = true,
+    button1 = ACCEPT, button2 = CANCEL, hasEditBox = true, maxLetters = 0, editBoxWidth = 320, timeout = 0, whileDead = true, hideOnEscape = true,
     OnShow = function(self) local box = BoxOf(self) box:SetText("") box:SetFocus() end,
     OnAccept = function(self) DoImport(BoxOf(self):GetText()) end,
     EditBoxOnEnterPressed = function(box) local popup = box:GetParent() DoImport(box:GetText()) popup:Hide() end,

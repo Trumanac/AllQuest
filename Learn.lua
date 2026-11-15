@@ -34,7 +34,7 @@ local function Remember(unit, questId, title, level)
 
     AQ.shared.learned[questId] = {
         n = title, l = level or UnitLevel("player"), k = kind, id = giverId, name = UnitName(unit),
-        m = mapId, x = math.floor(x * 1000 + 0.5) / 10, y = math.floor(y * 1000 + 0.5) / 10, t = time(),
+        f = UnitFactionGroup("player"), m = mapId, x = math.floor(x * 1000 + 0.5) / 10, y = math.floor(y * 1000 + 0.5) / 10, t = time(),
     }
     AQ.Data.InvalidateMap(mapId)
     AQ.RequestRefresh()

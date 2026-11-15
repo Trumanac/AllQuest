@@ -193,6 +193,7 @@ local function Place()
     else
         radius = (OUTDOOR[Minimap:GetZoom()] or OUTDOOR[5]) / 2
     end
+    if not radius or radius <= 0 then return end
     local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
     local halfW, halfH = Minimap:GetWidth() / 2, Minimap:GetHeight() / 2
     -- nothing moved since the last time (standing still, same zoom): the markers are already where they belong

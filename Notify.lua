@@ -16,7 +16,8 @@ local function Available()
     for _, map in ipairs(AQ.Data.MapIds()) do
         for _, pin in ipairs(AQ.PinsFor(map)) do
             for _, q in ipairs(pin.quests) do
-                if not set[q.id] and not q.locked then       -- a quest you cannot take yet is not "new" 
+                -- a quest you cannot take yet is not "new"; neither is a repeatable that reappears after a turn-in
+                if not set[q.id] and not q.locked and not q.rep then
                     set[q.id] = true
                     info[q.id] = { level = q.level, map = map }
                 end

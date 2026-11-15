@@ -1225,6 +1225,12 @@ loader:SetScript("OnEvent", function()
     -- Saved variables are ready by now.
     Install()
     if not Pins.installed then
-        AQ.Print(AQ.L["world map is not available; markers disabled."])
+        -- the world map may load late: try once more before giving up
+        C_Timer.After(5, function()
+            Install()
+            if not Pins.installed then
+                AQ.Print(AQ.L["world map is not available; markers disabled."])
+            end
+        end)
     end
 end)
