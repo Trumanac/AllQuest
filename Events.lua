@@ -27,14 +27,17 @@ function Events.Refresh()
         end
         local count = C_Calendar.GetNumDayEvents(offset, now.monthDay) or 0
         for i = 1, count do
-            any = true
             if C_Calendar.GetHolidayInfo then
                 local info = C_Calendar.GetHolidayInfo(offset, now.monthDay, i)
-                if info and info.name then set[Normalize(info.name)] = true end
+                if info and info.name then set[Normalize(info.name)] = true any = true end
             end
             if C_Calendar.GetDayEvent then
                 local event = C_Calendar.GetDayEvent(offset, now.monthDay, i)
-                if event and event.title then set[Normalize(event.title)] = true end
+                if event and event.title then
+                    set[Normalize(event.title)] = true
+                    -- player and guild events do not prove the holiday list has loaded
+                    if event.calendarType == "HOLIDAY" or event.calendarType == "RESET" then any = true end
+                end
             end
         end
     end)

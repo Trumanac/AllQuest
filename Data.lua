@@ -303,7 +303,10 @@ local function Entries(uiMapId)
     for qid, l in pairs(AQ.shared.learned) do
         -- a refreshed bundled database may now contain this giver: don't draw it twice
         -- learned data is account-wide: skip other-faction givers, and quests this race/class cannot take
+        local npc = l.k == "n" and DB.npcs[l.id]
+        local npcSide = npc and npc[3]    -- records saved before the faction field existed: use the NPC's side
         local foreign = (l.f and faction and l.f ~= faction) or (DB.quests[qid] and not Rec(qid))
+            or (not l.f and ((faction == "Alliance" and npcSide == "H") or (faction == "Horde" and npcSide == "A")))
         if l.m == uiMapId and not foreign and not Data.IsKnownGiver(l.k, l.id, qid) then
             local key = l.k .. l.id .. ":" .. l.x .. ":" .. l.y
             local g = groups[key]
