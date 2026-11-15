@@ -39,7 +39,9 @@ function Events.Refresh()
         end
     end)
     today = set
-    calendarUsable = ok and any   -- an empty answer may just mean the calendar has not loaded yet: then the date windows decide
+    -- holiday titles are matched against bundled English names, so on other languages the calendar cannot decide
+    local english = (GetLocale and GetLocale() or "enUS"):find("^en") ~= nil
+    calendarUsable = ok and any and english   -- an empty answer may just mean the calendar has not loaded yet: then the date windows decide
     return calendarUsable
 end
 

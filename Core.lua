@@ -501,6 +501,7 @@ function AQ.RequestSlowRefresh()
     C_Timer.After(5, function()
         slowPending = false
         AQ.RefreshAll()
+        if AQ.Notify then AQ.Notify.Baseline() end
     end)
 end
 
@@ -541,7 +542,6 @@ frame:SetScript("OnEvent", function(_, event, arg1, arg2)
     elseif event == "UPDATE_FACTION" or event == "SKILL_LINES_CHANGED" then
         AQ.RequestSlowRefresh()
     else
-        if event == "PLAYER_LEVEL_UP" then AQ.playerLevel = arg1 end
         if event == "PLAYER_LEVEL_UP" or event == "QUEST_TURNED_IN" then AQ.notifyNext = true end
         AQ.RequestRefresh()
     end

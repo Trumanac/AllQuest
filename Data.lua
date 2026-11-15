@@ -301,7 +301,8 @@ local function Entries(uiMapId)
     -- quests learned in game on this map, grouped by giver and spot
     local groups = {}
     for qid, l in pairs(AQ.shared.learned) do
-        if l.m == uiMapId then
+        -- a refreshed bundled database may now contain this giver: don't draw it twice
+        if l.m == uiMapId and not Data.IsKnownGiver(l.k, l.id, qid) then
             local key = l.k .. l.id .. ":" .. l.x .. ":" .. l.y
             local g = groups[key]
             if not g then
@@ -398,19 +399,27 @@ local function Evaluate(q, ctx)
     if not db.showAll and math.max(ql, req) > pl + db.levelsAbove then return end
     local locked = req > pl                    -- cannot be picked up yet
     if locked and db.hideLocked then return end
-    local trivial = ql < pl - ctx.green        -- grey for this character
+    local trivial = ql < pl - ctx.green and req <= ql   -- grey for this character (not when a high requirement makes it a real quest, e.g. level 1 / needs 42)
     if trivial and db.hideLowLevel then return end
 
     if q.parent and not ctx.inLog(q.parent) then return end
     if q.preS then
-        local met = false
+        local met, known = false, false
         for _, p in ipairs(q.preS) do
             if ctx.completed(p) then met = true break end
+            if DB.quests[p] then known = true end
         end
+        -- prerequisites the database does not contain at all can never be checked: do not hide the quest forever
+        if not known then met = true end
         if not met then return end
     elseif q.preG then
         for _, p in ipairs(q.preG) do
-            if not ctx.completed(p) then return end
+            -- a negative id means "must be active (or already done)"
+            if p < 0 then
+                if not (ctx.inLog(-p) or ctx.completed(-p)) then return end
+            elseif not ctx.completed(p) then
+                return
+            end
         end
     end
     if q.excl then

@@ -42,8 +42,9 @@ end
 
 -- A settings change can reveal or hide many quests at once: forget the old state so the next level-up does not
 -- announce them as new (no notice rather than a wrong one), then note the new state.
+local resetWhileWaiting = false
 function Notify.Reset()
-    if Notify.waiting then return end
+    if Notify.waiting then resetWhileWaiting = true return end
     base = nil
     Notify.Baseline()
 end
@@ -66,6 +67,7 @@ function Notify.Check()
     local now, info = Available()
     local old = base
     base = now
+    if resetWhileWaiting then resetWhileWaiting = false return end   -- settings changed meanwhile: not "new" quests
     if not old or not AQ.db.notifyNewQuests then return end
 
     local fresh = {}

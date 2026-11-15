@@ -1180,7 +1180,8 @@ end
 -- Install into the world map
 
 local function Install()
-    if Pins.installed or not WorldMapFrame or not WorldMapFrame.AddDataProvider then return end
+    if Pins.installed or not WorldMapFrame or not WorldMapFrame.AddDataProvider
+        or not WorldMapFrame.pinPools then return end
 
     local pool
     if CreateUnsecuredRegionPoolInstance then

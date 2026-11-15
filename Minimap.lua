@@ -182,6 +182,7 @@ local function Place()
     local py, px, _, inst = UnitPosition("player")
     if not px then
         for _, a in ipairs(active) do a.frame:Hide() end
+        placeDirty = true -- markers are hidden now; reposition even if the position comes back unchanged
         return
     end
     local rotate = GetCVar("rotateMinimap") == "1"
@@ -190,18 +191,18 @@ local function Place()
     if C_Minimap and C_Minimap.GetViewRadius then
         radius = C_Minimap.GetViewRadius()
     else
-        radius = OUTDOOR[Minimap:GetZoom()] / 2
+        radius = (OUTDOOR[Minimap:GetZoom()] or OUTDOOR[5]) / 2
     end
     local square = GetMinimapShape and GetMinimapShape() == "SQUARE"
     local halfW, halfH = Minimap:GetWidth() / 2, Minimap:GetHeight() / 2
     -- nothing moved since the last time (standing still, same zoom): the markers are already where they belong
     local v = lastView
     if not placeDirty and v.px == px and v.py == py and v.facing == facing and v.radius == radius
-        and v.square == square and v.halfW == halfW then
+        and v.square == square and v.halfW == halfW and v.halfH == halfH then
         return
     end
     placeDirty = false
-    v.px, v.py, v.facing, v.radius, v.square, v.halfW = px, py, facing, radius, square, halfW
+    v.px, v.py, v.facing, v.radius, v.square, v.halfW, v.halfH = px, py, facing, radius, square, halfW, halfH
     local sin, cos = math.sin(facing), math.cos(facing)
 
     for _, a in ipairs(active) do
