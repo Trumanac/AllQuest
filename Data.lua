@@ -84,7 +84,7 @@ function Data.QuestName(id)
     local d = DB.quests[id]
     if d then return d[1] end
     local l = AQ.shared.learned[id]
-    return l and l.n or ("Quest " .. id)
+    return l and l.n or (AQ.L["Quest %d"]):format(id)
 end
 
 function Data.RequiredLevel(id)

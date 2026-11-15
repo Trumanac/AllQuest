@@ -36,7 +36,7 @@ function Events.Refresh()
                 if event and event.title then
                     set[Normalize(event.title)] = true
                     -- player and guild events do not prove the holiday list has loaded
-                    if event.calendarType == "HOLIDAY" or event.calendarType == "RESET" then any = true end
+                    if event.calendarType == "HOLIDAY" then any = true end
                 end
             end
         end
@@ -85,7 +85,6 @@ end
 function Events.Request()
     pcall(function()
         if C_Calendar and C_Calendar.OpenCalendar then C_Calendar.OpenCalendar() end
-        if C_Calendar and C_Calendar.SetMonth then C_Calendar.SetMonth(0) end
     end)
 end
 

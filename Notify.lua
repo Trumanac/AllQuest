@@ -65,7 +65,7 @@ local MAX_LISTED = 4
 
 function Notify.Check()
     if not AQ.Data.ready then return end
-    if not AQ.db.notifyNewQuests then base = nil return end   -- notice is off: no need to scan the world
+    if not AQ.db.notifyNewQuests then base = nil resetWhileWaiting = false return end   -- notice is off: no need to scan the world
     local now, info = Available()
     local old = base
     base = now
