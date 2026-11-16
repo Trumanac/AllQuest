@@ -62,7 +62,10 @@ end
 -- one on or after the 3rd of the month (matches the announced 2026-11-09, 12-07, 2027-01-04, 02-08, 03-08, 04-05,
 -- 05-03, 06-07). Used when the calendar does not list the Faire.
 local DARKMOON = "Darkmoon Faire"
+local dmfAt, dmfValue = 0, false
 local function DarkmoonActive()
+    if GetTime and GetTime() - dmfAt < 30 then return dmfValue end   -- called once per Faire quest: reuse the answer
+    local r = false
     local n = RealmNow()
     local nowT = time({ year = n.year, month = n.month, day = n.day, hour = n.hour, min = n.min })
     for back = 0, 1 do
@@ -71,12 +74,13 @@ local function DarkmoonActive()
         for d = 3, 9 do
             if date("*t", time({ year = y, month = m, day = d, hour = 12 })).wday == 2 then   -- 2 = Monday
                 local start = time({ year = y, month = m, day = d, hour = 4 })
-                if nowT >= start and nowT < start + 7 * 86400 then return true end
+                if nowT >= start and nowT < start + 7 * 86400 then r = true end
                 break
             end
         end
     end
-    return false
+    dmfAt, dmfValue = GetTime and GetTime() or 0, r
+    return r
 end
 
 -- Port of the usual "is today inside start..end" test; dates are "D/M", ranges may wrap the new year.

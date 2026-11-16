@@ -16,6 +16,16 @@ local function ParseGuid(guid)
     if kind == "GameObject" then return "o", id end
 end
 
+-- true while a holiday other than Darkmoon Faire is on (Darkmoon quests are in the bundled data, and an ordinary
+-- missing quest learned during the Faire must not expire)
+local function Holiday()
+    if not AQ.Events then return false end
+    for _, name in ipairs(AQ.Events.ActiveList()) do
+        if name ~= "Darkmoon Faire" then return true end
+    end
+    return false
+end
+
 local function Remember(unit, questId, title, level, repeatable)
     local db = AQ.db
     if not (db and db.learnQuests and AQ.Data.ready) or not questId or questId <= 0 then return end
@@ -40,7 +50,7 @@ local function Remember(unit, questId, title, level, repeatable)
     AQ.shared.learned[questId] = {
         n = title, l = level or UnitLevel("player"), k = kind, id = giverId, name = UnitName(unit),
         f = UnitFactionGroup("player"), r = repeatable and true or nil,
-        h = (AQ.Events and #AQ.Events.ActiveList() > 0) or nil,    -- learned while a holiday was on: may be a holiday quest
+        h = Holiday() or nil,    -- learned while a holiday was on: may be a holiday quest
         m = mapId, x = math.floor(x * 1000 + 0.5) / 10, y = math.floor(y * 1000 + 0.5) / 10, t = time(),
     }
     AQ.Data.InvalidateMap(mapId)

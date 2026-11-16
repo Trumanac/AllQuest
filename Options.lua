@@ -700,7 +700,7 @@ local function Fill(B, resize)
 
     if AQ.Compat and AQ.Compat.QuestieLoaded() then
         Check(A, "Hide Questie's available-quest markers", "hideQuestieAvailable",
-            "Questie is installed: its own ! markers would sit on top of AllQuest's. Ticked: AllQuest switches them off in Questie (objectives, turn-ins and tracker keep working) and switches them back on when you untick this.")
+            "Questie is installed: its own ! markers would sit on top of AllQuest's. Ticked: AllQuest switches them off in Questie (objectives, turn-ins and tracker keep working) and switches them back on when you untick this. Untick it before removing AllQuest.")
     end
 
     A:Button("Reset all settings", function() StaticPopup_Show("ALLQUEST_RESET") end)
