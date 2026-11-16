@@ -569,24 +569,24 @@ SlashCmdList.ALLQUEST = function(msg)
         db.enabled = false
     elseif cmd == "all" then
         db.showAll = not db.showAll
-        AQ.Print("show all levels:", db.showAll and "on" or "off")
+        AQ.Print(AQ.L["show all levels:"], db.showAll and AQ.L["on"] or AQ.L["off"])
     elseif cmd == "above" then
         local n = tonumber(arg)
-        if not n then AQ.Print("usage: /allquest above <number>") return end
+        if not n then AQ.Print(AQ.L["usage: /allquest above <number>"]) return end
         db.levelsAbove = math.max(0, math.min(60, math.floor(n)))
         db.showAll = false
     elseif cmd == "low" then
         db.hideLowLevel = not db.hideLowLevel
-        AQ.Print("low level (grey) quests:", db.hideLowLevel and "hidden" or "shown")
+        AQ.Print(AQ.L["low level (grey) quests:"], db.hideLowLevel and AQ.L["hidden"] or AQ.L["shown"])
     elseif cmd == "minimap" then
         AQ.shared.minimap.hide = not AQ.shared.minimap.hide
         AQ.Minimap.ApplyButton()
-        AQ.Print("minimap button:", AQ.shared.minimap.hide and "hidden" or "shown")
+        AQ.Print(AQ.L["minimap button:"], AQ.shared.minimap.hide and AQ.L["hidden"] or AQ.L["shown"])
     elseif cmd == "preset" then
         if arg == "" then
             local _, _, name = AQ.CurrentPreset()
-            AQ.Print("current preset:", name or "custom (unsaved)")
-            AQ.Print("usage: /allquest preset <name> (Minimal, Detailed, Show All, or one you saved)")
+            AQ.Print(AQ.L["current preset:"], name or AQ.L["custom (unsaved)"])
+            AQ.Print(AQ.L["usage: /allquest preset <name> (Minimal, Detailed, Show All, or one you saved)"])
         else
             AQ.ApplyPreset(arg)
         end
@@ -599,7 +599,7 @@ SlashCmdList.ALLQUEST = function(msg)
         return
     elseif cmd == "profile" then
         if arg == "" then
-            AQ.Print("current profile:", AQ.ProfileName(), "- profiles:", table.concat(AQ.ProfileNames(), ", "))
+            AQ.Print(AQ.L["current profile:"], AQ.ProfileName(), AQ.L["- profiles:"], table.concat(AQ.ProfileNames(), ", "))
         else
             local found
             for _, name in ipairs(AQ.ProfileNames()) do
@@ -610,17 +610,17 @@ SlashCmdList.ALLQUEST = function(msg)
         return
     elseif cmd == "tracker" then
         db.hideTracker = not db.hideTracker
-        AQ.Print("Blizzard objective tracker:", db.hideTracker and "hidden" or "shown")
+        AQ.Print(AQ.L["Blizzard objective tracker:"], db.hideTracker and AQ.L["hidden"] or AQ.L["shown"])
     elseif cmd == "events" then
         local list = AQ.Events.ActiveList()
-        AQ.Print("holidays on now:", #list > 0 and table.concat(list, ", ") or "none")
+        AQ.Print(AQ.L["holidays on now:"], #list > 0 and table.concat(list, ", ") or AQ.L["none"])
         return
     elseif cmd == "learned" then
-        AQ.Print(("%d quests learned in game"):format(AQ.Learn.Count()))
+        AQ.Print((AQ.L["%d quests learned in game"]):format(AQ.Learn.Count()))
         return
     elseif cmd == "forget" then
         AQ.Learn.Forget()
-        AQ.Print("forgot all learned quests")
+        AQ.Print(AQ.L["forgot all learned quests"])
     elseif cmd == "settings" then
         AQ.OpenGameOptions()
         return
@@ -628,19 +628,19 @@ SlashCmdList.ALLQUEST = function(msg)
         local list = {}
         for id, rank in pairs(AQ.Data.PlayerSkills()) do list[#list + 1] = id .. "=" .. rank end
         table.sort(list)
-        AQ.Print("detected skills (id=level):", #list > 0 and table.concat(list, ", ") or "none")
+        AQ.Print(AQ.L["detected skills (id=level):"], #list > 0 and table.concat(list, ", ") or AQ.L["none"])
         return
     elseif cmd == "status" then
         local d = AQ.Data
-        AQ.Print(("profile: %s | markers %s | preset: %s"):format(AQ.ProfileName(), db.enabled and "on" or "off",
-            select(3, AQ.CurrentPreset()) or "custom"))
-        AQ.Print(("database: %s, %d maps, %d giver spots, %d quests learned, %d hidden"):format(
-            d.ready and "loaded" or "missing", d.mapCount, d.entryCount, AQ.Learn.Count(), #AQ.IgnoredList()))
+        AQ.Print((AQ.L["profile: %s | markers %s | preset: %s"]):format(AQ.ProfileName(), db.enabled and AQ.L["on"] or AQ.L["off"],
+            select(3, AQ.CurrentPreset()) or AQ.L["custom"]))
+        AQ.Print((AQ.L["database: %s, %d maps, %d giver spots, %d quests learned, %d hidden"]):format(
+            d.ready and AQ.L["loaded"] or AQ.L["missing"], d.mapCount, d.entryCount, AQ.Learn.Count(), #AQ.IgnoredList()))
         local m = AQ.DB.meta
         if m.date then
             local current = select(2, GetBuildInfo())
-            AQ.Print(("quest data from %s (client build %s)%s"):format(m.date, tostring(m.build),
-                (current and tostring(current) ~= tostring(m.build)) and (" - the game is now on build " .. current .. ", newer quests are learned as you meet them") or ""))
+            AQ.Print((AQ.L["quest data from %s (client build %s)%s"]):format(m.date, tostring(m.build),
+                (current and tostring(current) ~= tostring(m.build)) and ((AQ.L[" - the game is now on build %s, newer quests are learned as you meet them"]):format(current)) or ""))
         end
         return
     else

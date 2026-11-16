@@ -69,6 +69,16 @@ end
 -- Data
 
 -- All quests of the chosen zones that pass the search and the type filter.
+-- string.lower only handles ASCII; also fold the Latin-1 capitals (UTF-8 bytes C3 80-9E: A-umlaut, E-acute, N-tilde ...)
+-- that German, French and Spanish names use.
+local function Lower(text)
+    return ((text:gsub("[A-Z]", string.lower):gsub("\195([\128-\158])", function(c)
+        local b = c:byte()
+        if b ~= 151 then return "\195" .. string.char(b + 32) end   -- 151 is the multiplication sign
+    end)))
+end
+
+-- All quests of the chosen zones that pass the search and the type filter.
 local function Collect()
     local zones = {}
     local home = AQ.PlayerZone()
@@ -91,7 +101,7 @@ local function Collect()
         zones = AQ.Data.MapIds()
     end
 
-    local needle = state.text:lower()
+    local needle = Lower(state.text)
     local out = {}
     -- A quest can sit at many spots of one giver (a creature that spawns in several places, an item dropped all over a
     -- zone). The map marks every one; the list names the quest once per giver, at the spot nearest to the player.
@@ -104,8 +114,8 @@ local function Collect()
             for _, q in ipairs(pin.quests) do
                 local name = AQ.Data.QuestName(q.id)
                 local keep = needle == ""
-                    or name:lower():find(needle, 1, true) or giver:lower():find(needle, 1, true)
-                    or zoneName:lower():find(needle, 1, true)
+                    or Lower(name):find(needle, 1, true) or Lower(giver):find(needle, 1, true)
+                    or Lower(zoneName):find(needle, 1, true)
                 if keep and state.filter ~= "all" then
                     keep = false
                     for _, t in ipairs(AQ.TypesFor(q, pin.entry.kind)) do
@@ -140,9 +150,9 @@ end
 
 local function SortValue(item, key)
     if key == "level" then return item.q.level
-    elseif key == "name" then return item.name:lower()
-    elseif key == "giver" then return item.giver:lower()
-    elseif key == "zone" then return item.zoneName:lower()
+    elseif key == "name" then return Lower(item.name)
+    elseif key == "giver" then return Lower(item.giver)
+    elseif key == "zone" then return Lower(item.zoneName)
     elseif key == "distance" then return item.dist
     elseif key == "xp" then return item.xp
     elseif key == "money" then return item.money
@@ -378,8 +388,10 @@ local function Layout()
     totalWidth = x
     local width = math.max(MIN_WIDTH, totalWidth + 52)
     local screen = UIParent:GetWidth()
-    if screen and width > screen - 40 then width = screen - 40 end
+    local fit = 1
+    if screen and width > screen - 40 then fit = (screen - 40) / width end
     frame:SetWidth(width)
+    frame:SetScale(fit)             -- too wide for the screen: shrink the window rather than clip the columns
     content:SetWidth(totalWidth)
     for _, c in ipairs(COLUMNS) do
         local h = Header(c)
@@ -577,6 +589,7 @@ local function ColumnEntries()
     return entries
 end
 
+local searchToken
 local function Create()
     frame = CreateFrame("Frame", "AllQuestList", UIParent, "BasicFrameTemplateWithInset")
     frame:SetSize(MIN_WIDTH, 540)
@@ -643,7 +656,10 @@ local function Create()
     search:SetScript("OnTextChanged", function(box)
         state.text = box:GetText() or ""
         state.limit = PAGE
-        List.Refresh()
+        -- wait for a pause in typing: the list is rebuilt from every quest
+        searchToken = (searchToken or 0) + 1
+        local token = searchToken
+        C_Timer.After(0.15, function() if token == searchToken then List.Refresh() end end)
     end)
     search:SetScript("OnEscapePressed", function(box) box:ClearFocus() end)
     search:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
@@ -712,7 +728,8 @@ local function Create()
         if elapsed > 2 then
             elapsed = 0
             if state.sort == "distance" then
-                Render()
+                -- not while the mouse is over the rows: the row under it would change and its tooltip go stale
+                if not (content:GetParent() and content:GetParent():IsMouseOver()) then Render() end
             else
                 -- the order does not depend on distance: just refresh the numbers in the rows
                 for i = 1, #rows do

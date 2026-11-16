@@ -402,10 +402,12 @@ local function PinMenuEntries(info)
         end }
     end
     entries[#entries + 1] = { text = L["Hide this giver"], onClick = function() AQ.IgnoreGiver(entry.kind .. entry.id, name) end }
-    local first = info.quests[1]
-    if first and AQ.Data.Chain(first.id) then
-        local qname = AQ.Data.QuestName(first.id)
-        entries[#entries + 1] = { text = L["Hide the quest chain from"] .. ": " .. qname, onClick = function() AQ.IgnoreChain(first.id, qname) end }
+    for i, q in ipairs(info.quests) do
+        if i > 8 then break end
+        if AQ.Data.Chain(q.id) then
+            local qname = AQ.Data.QuestName(q.id)
+            entries[#entries + 1] = { text = L["Hide the quest chain from"] .. ": " .. qname, onClick = function() AQ.IgnoreChain(q.id, qname) end }
+        end
     end
     local zoneInfo = entry.map and C_Map.GetMapInfo(entry.map)
     if zoneInfo and zoneInfo.name then

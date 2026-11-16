@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.3
 - Quest data refreshed (build 70938): 5,270 quests, 2,556 giver spots.
 - Questie: when it is installed, AllQuest switches off Questie's own available-quest "!" markers so they do not sit on top of
   ours (new option "Hide Questie's available-quest markers", on by default; untick it and Questie's setting is restored).
@@ -13,6 +13,10 @@
 - Minimap: markers no longer stay hidden after the position is briefly unknown; safer with skins that change the minimap size.
 - Public API version 4: `IsAvailable` returns `false, "hidden"` for quests you hid.
 - Fix: the settings Export/Import box no longer cuts the text short.
+- Quest list: search matches accented capitals (German, French, Spanish), waits for a pause in typing, and the list no longer re-sorts under the mouse; on narrow screens the window shrinks instead of clipping columns.
+- Right-click menu on a marker offers "hide chain" for every quest at that giver that has one.
+- Questie's profile switch or reset re-applies the hide option; the holiday calendar redraws only when something changed.
+- Slash command output is translated (German, French, Spanish).
 
 ## 1.0.2
 - Quest data refreshed: 4,650 quests, 2,274 giver spots, and rewards for most of them (XP for about 4,000 quests, money for about

@@ -144,16 +144,35 @@ function Events.Request()
     end)
 end
 
+-- Re-read the calendar and redraw only when something a quest could depend on changed: the day, the holiday titles, or
+-- the Darkmoon Faire state (the date alone is not enough: the Faire opens at 4:00 realm time).
+local lastSig
+local function Signature()
+    local titles = {}
+    for title in pairs(today) do titles[#titles + 1] = title end
+    table.sort(titles)
+    local n = RealmNow()
+    return table.concat(titles, "|") .. "#" .. n.year .. "-" .. n.month .. "-" .. n.day
+        .. (calendarUsable and "c" or "w") .. (DarkmoonActive() and "d" or "")
+        .. "#" .. table.concat(Events.ActiveList(), "|")   -- date-window holidays flip at their own hour, mid-day
+end
+
+local function RefreshIfChanged()
+    Events.Refresh()
+    local sig = Signature()
+    if sig ~= lastSig then
+        lastSig = sig
+        AQ.RequestRefresh()
+    end
+end
+
 local frame = CreateFrame("Frame")
 pcall(frame.RegisterEvent, frame, "CALENDAR_UPDATE_EVENT_LIST")
-frame:SetScript("OnEvent", function()
-    Events.Refresh()
-    AQ.RequestRefresh()
-end)
+frame:SetScript("OnEvent", RefreshIfChanged)
 
 -- Ask for the calendar after login, then re-read it every few minutes (the date rolls over at midnight).
 function Events.Start()
     Events.Request()
-    C_Timer.After(5, function() Events.Refresh() AQ.RequestRefresh() end)
-    C_Timer.NewTicker(600, function() Events.Refresh() AQ.RequestRefresh() end)
+    C_Timer.After(5, RefreshIfChanged)
+    C_Timer.NewTicker(600, RefreshIfChanged)
 end

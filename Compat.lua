@@ -49,9 +49,22 @@ function Compat.Apply()
     end
 end
 
+-- A Questie profile switch or reset brings that profile's own values: apply again.
+local hooked
+local function WatchProfiles()
+    local Q = _G.Questie
+    local db = Q and Q.db
+    if hooked or not (db and db.RegisterCallback) then return end
+    hooked = true
+    for _, event in ipairs({ "OnProfileChanged", "OnProfileCopied", "OnProfileReset" }) do
+        pcall(db.RegisterCallback, Compat, event, function() C_Timer.After(1, Compat.Apply) end)
+    end
+end
+
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function()
+    WatchProfiles()
     -- Questie sets itself up a little after login
     pcall(Compat.Apply)            -- before Questie draws its first markers, when it is already loaded
     C_Timer.After(8, Compat.Apply)
