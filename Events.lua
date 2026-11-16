@@ -83,17 +83,36 @@ local function DarkmoonActive()
     return r
 end
 
--- Port of the usual "is today inside start..end" test; dates are "D/M", ranges may wrap the new year.
+-- How long a holiday runs, in days, from its bundled date window plus a few days of slack (21 when unknown).
+function Events.RunDays(name)
+    local w = AQ.DB.events and AQ.DB.events[name]
+    if not w then return 21 end
+    local sd, sm = (w.sd or ""):match("^(%d+)/(%d+)$")
+    local ed, em = (w.ed or ""):match("^(%d+)/(%d+)$")
+    if not sd then return 21 end
+    local y = 2001   -- any non-leap year
+    local a = time({ year = y, month = tonumber(sm), day = tonumber(sd), hour = 12 })
+    local b = time({ year = y, month = tonumber(em), day = tonumber(ed), hour = 12 })
+    if b < a then b = time({ year = y + 1, month = tonumber(em), day = tonumber(ed), hour = 12 }) end
+    return math.max(7, math.floor((b - a) / 86400) + 1) + 3
+end
+
+-- Is realm "now" inside the holiday's window? Dates are "D/M"; a window may wrap the new year. A window of a single
+-- day (the data gives one for Noblegarden, which really runs about a week) is widened to a week.
 local function WithinDates(d)
     local sd, sm = (d.sd or ""):match("^(%d+)/(%d+)$")
     local ed, em = (d.ed or ""):match("^(%d+)/(%d+)$")
     if not (sd and ed) then return false end
-    local t = RealmNow()
-    local current = t.month * 1000000 + t.day * 10000 + t.hour * 100 + t.min
-    local start = tonumber(sm) * 1000000 + tonumber(sd) * 10000 + (d.sh or 0) * 100 + (d.sm or 0)
-    local finish = tonumber(em) * 1000000 + tonumber(ed) * 10000 + (d.eh or 23) * 100 + (d.em or 59)
-    if start <= finish then return current >= start and current <= finish end
-    return current >= start or current <= finish
+    local n = RealmNow()
+    local nowT = time({ year = n.year, month = n.month, day = n.day, hour = n.hour, min = n.min })
+    for y = n.year - 1, n.year do
+        local start = time({ year = y, month = tonumber(sm), day = tonumber(sd), hour = d.sh or 0, min = d.sm or 0 })
+        local ey = (tonumber(em) < tonumber(sm) or (em == sm and tonumber(ed) < tonumber(sd))) and y + 1 or y
+        local finish = time({ year = ey, month = tonumber(em), day = tonumber(ed), hour = d.eh or 23, min = d.em or 59 })
+        if finish - start < 86400 then finish = start + 7 * 86400 end
+        if nowT >= start and nowT <= finish then return true end
+    end
+    return false
 end
 
 function Events.IsActive(name)

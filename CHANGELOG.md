@@ -5,10 +5,10 @@
 - Questie: when it is installed, AllQuest switches off Questie's own available-quest "!" markers so they do not sit on top of
   ours (new option "Hide Questie's available-quest markers", on by default; untick it and Questie's setting is restored).
 - Darkmoon Faire quests show while the Faire is on (Monday 4:00 realm time, 7 days), also on non-English clients.
-- Holiday dates use realm time. Non-English clients fall back to the built-in date windows.
+- Holiday date windows use realm time (a one-day window such as Noblegarden is widened to a week). Non-English clients fall back to the built-in date windows.
 - Learned quests: no duplicates once the data knows the giver, never shown to the other faction or to races/classes that
-  cannot take them, repeatable ones stay, the first giver seen is kept, holiday ones expire, XP keeps the highest value seen.
-- Quests whose prerequisite is not in the data (or a Warlock Dreadsteed chain quest) are no longer hidden forever.
+  cannot take them, repeatable ones stay, the first giver seen is kept, holiday ones expire a few days after that holiday's run, XP keeps the highest value seen.
+- Warlock Dreadsteed chain quests ("must be active" prerequisites) can show again. Quests whose prerequisite Questie hides (removed or not yet out) stay hidden until the data is refreshed.
 - Notices: no false "new quest" for repeatables, after a settings change, or after reputation/skill gains.
 - Minimap: markers no longer stay hidden after the position is briefly unknown; safer with skins that change the minimap size.
 - Public API version 4: `IsAvailable` returns `false, "hidden"` for quests you hid.

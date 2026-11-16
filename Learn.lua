@@ -16,14 +16,13 @@ local function ParseGuid(guid)
     if kind == "GameObject" then return "o", id end
 end
 
--- true while a holiday other than Darkmoon Faire is on (Darkmoon quests are in the bundled data, and an ordinary
--- missing quest learned during the Faire must not expire)
+-- The name of a holiday other than Darkmoon Faire that is on now (Darkmoon quests are in the bundled data, and an
+-- ordinary missing quest learned during the Faire must not expire), or nil.
 local function Holiday()
-    if not AQ.Events then return false end
+    if not AQ.Events then return end
     for _, name in ipairs(AQ.Events.ActiveList()) do
-        if name ~= "Darkmoon Faire" then return true end
+        if name ~= "Darkmoon Faire" then return name end
     end
-    return false
 end
 
 local function Remember(unit, questId, title, level, repeatable)

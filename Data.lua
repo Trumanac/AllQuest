@@ -305,7 +305,8 @@ local function Entries(uiMapId)
         -- learned data is account-wide: skip other-faction givers, and quests this race/class cannot take
         local npc = l.k == "n" and DB.npcs[l.id]
         local npcSide = npc and npc[3]    -- records saved before the faction field existed: use the NPC's side
-        local expired = l.h and l.t and (time() - l.t) > 45 * 86400   -- learned during a holiday and not offered since
+        -- learned while a holiday was on: it is gone when that holiday's run (plus a few days) has passed since it was last offered
+        local expired = l.h and l.t and (time() - l.t) > (AQ.Events and AQ.Events.RunDays(l.h) or 21) * 86400
         local foreign = expired or (l.f and faction and l.f ~= faction) or (DB.quests[qid] and not Rec(qid))
             or (not l.f and ((faction == "Alliance" and npcSide == "H") or (faction == "Horde" and npcSide == "A")))
         if l.m == uiMapId and not foreign and not Data.IsKnownGiver(l.k, l.id, qid) then
@@ -410,20 +411,19 @@ local function Evaluate(q, ctx)
 
     if q.parent and not ctx.inLog(q.parent) then return end
     if q.preS then
-        local met, known = false, false
+        -- a prerequisite that is not in the data is one Questie hides (removed, or not out in this phase): the
+        -- quest cannot be started yet, so it stays hidden until a data refresh brings the prerequisite in
+        local met = false
         for _, p in ipairs(q.preS) do
             if ctx.completed(p) then met = true break end
-            if DB.quests[p] then known = true end
         end
-        -- prerequisites the database does not contain at all can never be checked: do not hide the quest forever
-        if not known then met = true end
         if not met then return end
     elseif q.preG then
         for _, p in ipairs(q.preG) do
             -- a negative id means "must be active (or already done)"
             if p < 0 then
                 if not (ctx.inLog(-p) or ctx.completed(-p)) then return end
-            elseif DB.quests[p] and not ctx.completed(p) then   -- ids the database lacks can never be checked
+            elseif not ctx.completed(p) then
                 return
             end
         end
