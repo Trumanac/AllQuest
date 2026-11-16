@@ -48,12 +48,43 @@ function Events.Refresh()
     return calendarUsable
 end
 
+-- The calendar's "now" in realm time (the holiday schedules are realm time), as year/month/day/hour/min.
+local function RealmNow()
+    local t = C_DateAndTime and C_DateAndTime.GetCurrentCalendarTime and C_DateAndTime.GetCurrentCalendarTime()
+    if t and t.year and t.monthDay then
+        return { year = t.year, month = t.month, day = t.monthDay, hour = t.hour or 0, min = t.minute or 0 }
+    end
+    local d = date("*t")
+    return { year = d.year, month = d.month, day = d.day, hour = d.hour, min = d.min }
+end
+
+-- Darkmoon Faire, WoW Forever: opens on a Monday at 4:00 realm time and stays 7 days. The Monday is the first
+-- one on or after the 3rd of the month (matches the announced 2026-11-09, 12-07, 2027-01-04, 02-08, 03-08, 04-05,
+-- 05-03, 06-07). Used when the calendar does not list the Faire.
+local DARKMOON = "Darkmoon Faire"
+local function DarkmoonActive()
+    local n = RealmNow()
+    local nowT = time({ year = n.year, month = n.month, day = n.day, hour = n.hour, min = n.min })
+    for back = 0, 1 do
+        local y, m = n.year, n.month - back
+        if m < 1 then m = 12 y = y - 1 end
+        for d = 3, 9 do
+            if date("*t", time({ year = y, month = m, day = d, hour = 12 })).wday == 2 then   -- 2 = Monday
+                local start = time({ year = y, month = m, day = d, hour = 4 })
+                if nowT >= start and nowT < start + 7 * 86400 then return true end
+                break
+            end
+        end
+    end
+    return false
+end
+
 -- Port of the usual "is today inside start..end" test; dates are "D/M", ranges may wrap the new year.
 local function WithinDates(d)
     local sd, sm = (d.sd or ""):match("^(%d+)/(%d+)$")
     local ed, em = (d.ed or ""):match("^(%d+)/(%d+)$")
     if not (sd and ed) then return false end
-    local t = date("*t")
+    local t = RealmNow()
     local current = t.month * 1000000 + t.day * 10000 + t.hour * 100 + t.min
     local start = tonumber(sm) * 1000000 + tonumber(sd) * 10000 + (d.sh or 0) * 100 + (d.sm or 0)
     local finish = tonumber(em) * 1000000 + tonumber(ed) * 10000 + (d.eh or 23) * 100 + (d.em or 59)
@@ -67,6 +98,7 @@ function Events.IsActive(name)
     for title in pairs(today) do
         if title:find(wanted, 1, true) then return true end
     end
+    if name == DARKMOON then return DarkmoonActive() end
     if calendarUsable then return false end
     local window = AQ.DB.events and AQ.DB.events[name]
     return window ~= nil and WithinDates(window)
@@ -78,6 +110,7 @@ function Events.ActiveList()
     for name in pairs(AQ.DB.events or {}) do
         if Events.IsActive(name) then list[#list + 1] = name end
     end
+    if not (AQ.DB.events and AQ.DB.events[DARKMOON]) and Events.IsActive(DARKMOON) then list[#list + 1] = DARKMOON end
     table.sort(list)
     return list
 end

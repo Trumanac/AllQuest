@@ -27,6 +27,7 @@ Learn.lua
 Pins.lua
 Minimap.lua
 Tracker.lua
+Compat.lua
 Options.lua
 Notify.lua
 QuestList.lua

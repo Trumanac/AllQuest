@@ -16,7 +16,7 @@ local function ParseGuid(guid)
     if kind == "GameObject" then return "o", id end
 end
 
-local function Remember(unit, questId, title, level)
+local function Remember(unit, questId, title, level, repeatable)
     local db = AQ.db
     if not (db and db.learnQuests and AQ.Data.ready) or not questId or questId <= 0 then return end
     local kind, giverId = ParseGuid(UnitGUID(unit))
@@ -24,7 +24,12 @@ local function Remember(unit, questId, title, level)
     if AQ.Data.IsKnownGiver(kind, giverId, questId) then return end
 
     local existing = AQ.shared.learned[questId]
-    if existing and existing.k == kind and existing.id == giverId then return end
+    if existing then
+        -- keep the first giver seen (a second one would make the marker jump between them); note it was seen again
+        existing.t = time()
+        if repeatable and not existing.r then existing.r = true AQ.Data.InvalidateMap(existing.m) end
+        return
+    end
 
     local mapId = C_Map.GetBestMapForUnit("player")
     local pos = mapId and C_Map.GetPlayerMapPosition(mapId, "player")
@@ -34,7 +39,9 @@ local function Remember(unit, questId, title, level)
 
     AQ.shared.learned[questId] = {
         n = title, l = level or UnitLevel("player"), k = kind, id = giverId, name = UnitName(unit),
-        f = UnitFactionGroup("player"), m = mapId, x = math.floor(x * 1000 + 0.5) / 10, y = math.floor(y * 1000 + 0.5) / 10, t = time(),
+        f = UnitFactionGroup("player"), r = repeatable and true or nil,
+        h = (AQ.Events and #AQ.Events.ActiveList() > 0) or nil,    -- learned while a holiday was on: may be a holiday quest
+        m = mapId, x = math.floor(x * 1000 + 0.5) / 10, y = math.floor(y * 1000 + 0.5) / 10, t = time(),
     }
     AQ.Data.InvalidateMap(mapId)
     AQ.RequestRefresh()
@@ -58,7 +65,7 @@ local function ScanGossip()
     if not (C_GossipInfo and C_GossipInfo.GetAvailableQuests) then return end
     local titles = {}
     for _, q in ipairs(C_GossipInfo.GetAvailableQuests() or {}) do
-        titles[#titles + 1] = Remember("npc", q.questID, q.title, q.questLevel)
+        titles[#titles + 1] = Remember("npc", q.questID, q.title, q.questLevel, q.repeatable or (q.frequency and q.frequency > 0))
     end
     Announce(titles)
 end
@@ -67,7 +74,7 @@ local function ScanDetail()
     local id = GetQuestID and GetQuestID()
     if not id or id == 0 then return end
     local level = C_QuestLog and C_QuestLog.GetQuestDifficultyLevel and C_QuestLog.GetQuestDifficultyLevel(id)
-    local title = Remember("questnpc", id, GetTitleText and GetTitleText() or nil, level)
+    local title = Remember("questnpc", id, GetTitleText and GetTitleText() or nil, level, QuestIsDaily and (QuestIsDaily() or (QuestIsWeekly and QuestIsWeekly())) or nil)
     if title then Announce({ title }) end
 end
 
@@ -99,8 +106,9 @@ local function ScanRewards(questId, retry)
     end
     local record = { GetRewardXP() or 0, GetRewardMoney and GetRewardMoney() or 0, #items > 0 and items or nil, #choices > 0 and choices or nil }
     local old = AQ.shared.rewards[questId]
-    -- a max-level character sees no XP (the dialog shows money instead): keep what a lower level saw
-    if record[1] == 0 and old and (old[1] or 0) > 0 then record[1], record[2] = old[1], old[2] end
+    -- the dialog shows the XP for THIS character (reduced for grey quests, none at max level): keep the highest
+    -- amount ever seen, together with the money that went with it
+    if old and (old[1] or 0) > record[1] then record[1], record[2] = old[1], old[2] end
     if old and old[1] == record[1] and old[2] == record[2] and #(old[3] or {}) == #items and #(old[4] or {}) == #choices then return end
     AQ.shared.rewards[questId] = record
     if AQ.QuestList and AQ.QuestList.Refresh then AQ.QuestList.Refresh() end

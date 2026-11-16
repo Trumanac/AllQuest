@@ -20,6 +20,7 @@ AQ.defaults = {
     minimapPins = true,      -- also draw markers on the minimap
     minimapScale = 1.0,
     hideTracker = false,     -- hide Blizzard's objective tracker
+    hideQuestieAvailable = true, -- when Questie is installed, switch off its available-quest markers (see Compat.lua)
     learnQuests = true,      -- remember quests the bundled database lacks when a giver offers them
     showFilterButton = true, -- small quest-type filter button on the world map
     hiddenTypes = {},        -- quest types switched off in the filter: type name -> true
@@ -475,6 +476,7 @@ function AQ.SettingsChanged()
     if AQ.UpdateMapButton then AQ.UpdateMapButton() end
     if AQ.Minimap then AQ.Minimap.UpdateButton() end
     if AQ.Tracker then AQ.Tracker.Apply() end
+    if AQ.Compat then AQ.Compat.Apply() end
     if AQ.RefreshOptions then AQ.RefreshOptions() end
 end
 

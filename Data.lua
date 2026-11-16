@@ -237,7 +237,7 @@ end
 -- Quests the player has been offered in game that the bundled database lacks (or lacks that giver for):
 -- AQ.shared.learned[questId] = { n = title, l = level, k = "n"|"o", id = giver id, name = giver name, m = uiMapId, x, y }
 local function LearnedRec(id, l)
-    return { id = id, ql = l.l, req = 0, rep = false }
+    return { id = id, ql = l.l, req = 0, rep = l.r and true or false }
 end
 
 local mapCache = {}
@@ -305,7 +305,8 @@ local function Entries(uiMapId)
         -- learned data is account-wide: skip other-faction givers, and quests this race/class cannot take
         local npc = l.k == "n" and DB.npcs[l.id]
         local npcSide = npc and npc[3]    -- records saved before the faction field existed: use the NPC's side
-        local foreign = (l.f and faction and l.f ~= faction) or (DB.quests[qid] and not Rec(qid))
+        local expired = l.h and l.t and (time() - l.t) > 45 * 86400   -- learned during a holiday and not offered since
+        local foreign = expired or (l.f and faction and l.f ~= faction) or (DB.quests[qid] and not Rec(qid))
             or (not l.f and ((faction == "Alliance" and npcSide == "H") or (faction == "Horde" and npcSide == "A")))
         if l.m == uiMapId and not foreign and not Data.IsKnownGiver(l.k, l.id, qid) then
             local key = l.k .. l.id .. ":" .. l.x .. ":" .. l.y

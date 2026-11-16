@@ -7,7 +7,7 @@ local AddOn, AQ = ...
 --   AllQuestAPI.IsReady()                     true once the quest database is loaded
 --   AllQuestAPI.GetQuests(uiMapId)            list of quests available on a map (see Describe for the fields)
 --   AllQuestAPI.GetNearest([limit], [maxYards])  the closest available quests to the player, nearest first
---   AllQuestAPI.IsAvailable(questId)          true when the quest is available to the player right now (markers show it)
+--   AllQuestAPI.IsAvailable(questId)          true when available right now (markers show it); false, "hidden" when the player hid it; false otherwise
 --   AllQuestAPI.GetGivers(questId)            every giver spot of an available quest (same fields as GetQuests)
 --   AllQuestAPI.GetQuestInfo(questId)         one entry like GetQuests gives (the nearest giver), or nil when not available
 --   AllQuestAPI:RegisterCallback("AllQuest_Hidden", fn)      called after the player hid or restored quests, givers or zones
@@ -16,7 +16,8 @@ local AddOn, AQ = ...
 --   AllQuestAPI:RegisterCallback("AllQuest_Refreshed", fn)   called after the markers were redrawn
 -- version 2: quests carry their rewards, and GetRewards exists
 -- version 3: IsAvailable, GetGivers and GetQuestInfo; GetQuests takes options; the AllQuest_Hidden callback
-local API = { version = 3 }
+-- version 4: IsAvailable returns false, "hidden" for quests the player hid
+local API = { version = 4 }
 AQ.API = API
 _G.AllQuestAPI = API
 
@@ -79,8 +80,12 @@ function API.GetGivers(questId)
     return list
 end
 
+-- true when available; false, "hidden" when the player hid the quest or its chain (so a caller can tell that apart
+-- from "not available"); false otherwise. Display filters (level range, grey quests ...) count as not available.
 function API.IsAvailable(questId)
-    return #API.GetGivers(questId) > 0
+    if #API.GetGivers(questId) > 0 then return true end
+    if API.IsHidden(questId) then return false, "hidden" end
+    return false
 end
 
 function API.GetQuestInfo(questId)

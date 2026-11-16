@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- Quest data refreshed (build 70938): 5,270 quests, 2,556 giver spots.
+- Questie: when it is installed, AllQuest switches off Questie's own available-quest "!" markers so they do not sit on top of
+  ours (new option "Hide Questie's available-quest markers", on by default; untick it and Questie's setting is restored).
+- Darkmoon Faire quests show while the Faire is on (Monday 4:00 realm time, 7 days), also on non-English clients.
+- Holiday dates use realm time. Non-English clients fall back to the built-in date windows.
+- Learned quests: no duplicates once the data knows the giver, never shown to the other faction or to races/classes that
+  cannot take them, repeatable ones stay, the first giver seen is kept, holiday ones expire, XP keeps the highest value seen.
+- Quests whose prerequisite is not in the data (or a Warlock Dreadsteed chain quest) are no longer hidden forever.
+- Notices: no false "new quest" for repeatables, after a settings change, or after reputation/skill gains.
+- Minimap: markers no longer stay hidden after the position is briefly unknown; safer with skins that change the minimap size.
+- Public API version 4: `IsAvailable` returns `false, "hidden"` for quests you hid.
+- Fix: the settings Export/Import box no longer cuts the text short.
+
 ## 1.0.2
 - Quest data refreshed: 4,650 quests, 2,274 giver spots, and rewards for most of them (XP for about 4,000 quests, money for about
   970, reward and choose-one items for about 1,800); anything missing fills in as you open quest windows.
